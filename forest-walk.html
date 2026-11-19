@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>森林考察 · 植物图鉴（治愈像素版）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: linear-gradient(160deg, #f7f0de 0%, #eaf4dd 55%, #dcf0d6 100%);
+    color: #4a5a44; min-height: 100vh; padding: 14px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1 { font-size: 20px; letter-spacing: 2px; color: #5f9364; }
+  .subtitle { color: #8aa07e; font-size: 13px; margin: 2px 0 10px; }
+  header.bar {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+    background: rgba(255,255,255,.6); border: 1px solid #cfe3bd; border-radius: 14px;
+    padding: 8px 14px; margin-bottom: 10px; font-size: 14px;
+    box-shadow: 0 2px 10px rgba(140,170,120,.15);
+  }
+  .stat b { color: #d98a3d; }
+  .energy-dots { letter-spacing: 1px; color: #8fbe82; font-size: 11px; }
+  .bag-chips span { display:inline-block; background:#e3f0d4; border-radius:6px; padding:1px 5px; margin-right:3px; font-size:13px; }
+  .layout { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px; }
+  @media (max-width: 900px){ .layout { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,.6); border: 1px solid #cfe3bd; border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(140,170,120,.12);
+  }
+  .panel h2 { font-size: 14px; color: #6f9e72; margin-bottom: 8px; letter-spacing: 1px; }
+  #cvwrap { position: relative; }
+  #plantHud {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,253,242,0.94); border: 1.5px solid #b5d3a5;
+    border-radius: 999px; padding: 5px 10px 5px 16px; font-size: 13px; color: #5a6b52;
+    display: flex; align-items: center; gap: 10px; box-shadow: 0 3px 10px rgba(90,110,70,.18);
+    z-index: 5; pointer-events: none; white-space: nowrap;
+  }
+  #plantHud button {
+    pointer-events: auto; cursor: pointer; border: 1px solid #d9b98a;
+    background: #ffe9bd; color: #8a6428; font-size: 12px; border-radius: 999px;
+    padding: 3px 12px; font-family: inherit; text-shadow: none;
+  }
+  #plantHud button:hover { background: #ffdf9e; }
+  #cv {
+    width: 100%; display: block; border-radius: 12px; background: #e8f0d4;
+    cursor: pointer; image-rendering: pixelated;
+    box-shadow: 0 3px 14px rgba(120,150,100,.2);
+  }
+  .exitlabel {
+    position: absolute; transform: translate(-50%, -50%);
+    background: rgba(255,252,240,.92); border: 1px solid #dbab63; color: #7a5a2e;
+    font-size: 11px; padding: 2px 7px; border-radius: 8px; pointer-events: none;
+    white-space: nowrap; box-shadow: 0 1px 4px rgba(150,120,60,.25);
+  }
+  .controls { display: flex; align-items: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 38px); gap: 4px; }
+  .dpad button { background: #9cc98f; color:#fff; border:none; border-radius:10px; font-size:16px; cursor:pointer; text-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .dpad button:active { background:#8fbe82; }
+  button.act {
+    background: #9cc98f; color: #fff; border: none; border-radius: 10px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer; font-family: inherit;
+    text-shadow: 0 1px 2px rgba(0,0,0,.12);
+  }
+  button.act:hover { background: #8fbe82; }
+  button.act:disabled { background: #d8e4c8; color: #a8b89a; cursor: not-allowed; text-shadow:none; }
+  button.act.warn { background: #e2b071; }
+  button.act.warn:hover { background: #d9a05b; }
+  button.act.ghost { background: transparent; border: 1px solid #b5d3a5; color: #6f9e72; text-shadow:none; }
+  .hint { color: #7a8a6f; font-size: 12px; }
+  .hint b { color: #d98a3d; }
+  .warnline { color: #c98a4d; font-size: 13px; margin-top: 6px; min-height: 18px; }
+  .travel-btns button { margin: 0 6px 6px 0; }
+  #log { font-size: 13px; line-height: 1.65; max-height: 180px; overflow-y: auto; }
+  #log .entry { border-bottom: 1px dashed rgba(120,140,100,.25); padding: 3px 0; }
+  .dexgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .dex-card {
+    border-radius: 10px; padding: 8px; font-size: 12px;
+    border: 1px solid #cfe3bd; background: rgba(255,255,255,.55); display: flex; gap: 8px; align-items: center;
+  }
+  .dex-card .ic { font-size: 22px; }
+  .dex-card.st0 { opacity: .5; }
+  .dex-card.st0 .ic { filter: brightness(0) opacity(.4); }
+  .dex-card.st1 .ic { filter: grayscale(1) brightness(.9); }
+  .dex-card.st2 { border-color: #a8d49a; background: rgba(220,240,200,.5); }
+  .dex-card .nm { color: #c07a3a; font-weight: bold; }
+  .dex-card .info { color: #7a8a6f; font-size: 11px; line-height: 1.4; }
+  .progresswrap { display:flex; align-items:center; gap:10px; margin-bottom: 8px; font-size: 13px; }
+  .progress { flex:1; height: 8px; background: #e3eed8; border-radius: 6px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg,#a8d49a,#f2c46d); border-radius:6px; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(80,90,60,.45); display: none;
+    align-items: center; justify-content: center; z-index: 50; backdrop-filter: blur(2px);
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: #fffdf2; border: 1px solid #d8e8c8; border-radius: 18px;
+    max-width: 580px; width: 92%; padding: 22px 24px; max-height: 84vh; overflow-y: auto;
+    box-shadow: 0 8px 30px rgba(100,120,70,.25);
+  }
+  .modal h3 { color: #d98a3d; margin-bottom: 12px; font-size: 17px; }
+  .modal ul { line-height: 1.9; font-size: 14px; padding-left: 20px; }
+  .modal .tip { color: #7a8a6f; font-size: 13px; margin-top: 10px; }
+  .baglist { margin: 10px 0; }
+  .baglist button { margin: 3px 4px 3px 0; }
+  .close-x { float: right; background: none; border: none; color: #9ab08a; font-size: 18px; cursor: pointer; }
+  .starnote { font-size: 15px; color: #d98a3d; margin: 8px 0; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌿 森林考察 · 植物图鉴 <span style="font-size:13px;color:#8aa07e">治愈像素版</span></h1>
+  <div class="subtitle">🖱️ 点哪走哪：点击场景走过去（自动绕开树木岩石），点植物采集、点木牌赶路、点朋友聊天，全程只用鼠标。</div>
+
+  <header class="bar">
+    <div class="stat">🗓 第 <b id="stDay">1</b> 天</div>
+    <div class="stat"><span id="stPeriodIcon">🌅</span> <b id="stPeriod">清晨</b></div>
+    <div class="stat">⚡ 体力 <span class="energy-dots" id="stEnergy"></span> <b id="stEnergyNum"></b></div>
+    <div class="stat">📍 <b id="stPos">营地</b></div>
+    <div class="stat bag-chips">🎒 标本夹 <b id="stBag">0/4</b> <span id="stBagItems"></span></div>
+    <div style="margin-left:auto">
+      <button class="act ghost" onclick="openRules()">📖 手册</button>
+      <button class="act warn" onclick="endTrip(false)">⛺ 收工返营</button>
+      <button class="act ghost" onclick="resetGame()">↺</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <div id="cvwrap">
+          <canvas id="cv" width="1040" height="620"></canvas>
+          <div id="exitLabels"></div>
+          <div id="plantHud"><span id="plantCount">🌿</span><button onclick="seekNearestPlant()">🔍 指路到最近植物</button></div>
+        </div>
+        <div class="controls">
+          <div class="hint" id="ctrlHint">🖱️ 点击场景走过去 · 点植物采集 · 点木牌赶路 · 点朋友聊天</div>
+        </div>
+        <div class="warnline" id="nightWarn"></div>
+      </div>
+      <div class="panel">
+        <h2>🚏 慢慢赶路（同样消耗体力）</h2>
+        <div class="travel-btns" id="travelBtns"></div>
+      </div>
+      <div class="panel">
+        <h2>📝 考察日志</h2>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>📕 植物图鉴</h2>
+        <div class="progresswrap">
+          <div class="progress"><div id="dexBar" style="width:0%"></div></div>
+          <span id="dexCount">0/18</span>
+        </div>
+        <div class="dexgrid" id="dexGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 规则 -->
+<div class="overlay" id="rulesOverlay">
+  <div class="modal">
+    <button class="close-x" onclick="closeOverlay('rulesOverlay')">✕</button>
+    <h3>📖 考察手册</h3>
+    <ul>
+      <li>⏳ <b>体力即时间</b>：每次考察 12 点体力。每消耗 3 点进入下一时段：<b>清晨 → 正午 → 黄昏 → 夜晚</b>。散步不耗体力，<b>赶路（过木牌）和采集</b>才消耗。</li>
+      <li>🖱️ <b>怎么操作？</b>点击场景任意位置走过去，小人会<b>自动绕开树木和岩石</b>；点击植物采集、点击木牌赶路、点击朋友聊天，靠近后自动完成交互。</li>
+      <li>🚶 <b>先去哪？</b>区域之间距离不同（看木牌数字），一天跑不完全部区域——出发前规划路线。</li>
+      <li>🌿 <b>什么时候拿？</b>植物只在<b>特定区域 + 特定时段</b>出现，时段更替时重新刷新；稀有植物即使时机对了也可能不现身。</li>
+      <li>🎒 <b>拿什么？</b>标本夹只有 <b>4 格</b>。装满后遇到新植物，只能替换或放弃。</li>
+      <li>💧 <b>受潮规则</b>：收工时若<b>不在营地</b>，标本夹里<b>一半标本受潮损毁</b>（向下取整）。预留返程体力，或者干脆空夹夜采。</li>
+      <li>💬 <b>森林里的朋友</b>：每个区域都住着一位朋友，靠近后按 <b>Q</b> 聊聊天——他们很乐意给你提示哦。</li>
+      <li>🗺️ <b>隐藏区域</b>：森林深处还有 <b>3 个新区域</b>（🌸桃花谷 · 🎋月竹林 · ✨星光湖）藏在木牌后面。把图鉴点亮到 <b>4 / 6 / 8 种</b>，对应的木牌就会自动解锁，还各有 2 种新植物等着你。</li>
+    </ul>
+    <div class="tip">💡 图鉴"剪影"= 发现过但没带回。集齐 18 种即通关。不着急，慢慢走，森林会等你的。🌙</div>
+    <div class="rowbtns" style="margin-top:14px"><button class="act" onclick="closeOverlay('rulesOverlay')">出 发</button></div>
+  </div>
+</div>
+
+<!-- 背包已满 -->
+<div class="overlay" id="bagOverlay">
+  <div class="modal">
+    <h3>🎒 标本夹已满！</h3>
+    <div id="bagFoundText" style="margin-bottom:8px"></div>
+    <div class="baglist" id="bagList"></div>
+    <div class="rowbtns"><button class="act warn" onclick="declineFound()">轻轻放它回去</button></div>
+  </div>
+</div>
+
+<!-- 通关 -->
+<div class="overlay" id="winOverlay">
+  <div class="modal" style="text-align:center">
+    <h3>🌸 图鉴点亮完成！</h3>
+    <div id="winText"></div>
+    <div class="starnote" id="winStars"></div>
+    <div class="rowbtns" style="justify-content:center"><button class="act" onclick="closeOverlay('winOverlay')">继续在森林里散步</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ================= 数据 =================
+const MAXE = 12, BAGMAX = 4, PR = 13, PS = 3; // PS = 像素块大小
+const W = 1040, H = 620;
+const PERIODS = ["清晨","正午","黄昏","夜晚"];
+const PERIOD_ICONS = ["🌅","☀️","🌇","🌙"];
+const TINT = ["rgba(255,205,150,0.12)","rgba(255,252,225,0.04)","rgba(255,160,115,0.15)","rgba(45,55,95,0.38)"];
+
+const SCENES = {
+  camp:  { name:"营地",     emoji:"⛺", type:"camp" },
+  valley:{ name:"溪谷",     emoji:"🏞️", type:"valley" },
+  slope: { name:"向阳坡",   emoji:"⛰️", type:"slope" },
+  forest:{ name:"密林",     emoji:"🌲", type:"forest" },
+  swamp: { name:"迷雾沼泽", emoji:"🌫️", type:"swamp" },
+  peach: { name:"桃花谷",   emoji:"🌸", type:"peach" },
+  bamboo:{ name:"月竹林",   emoji:"🎋", type:"bamboo" },
+  lake:  { name:"星光湖",   emoji:"✨", type:"lake" }
+};
+
+// 隐藏区域解锁条件：图鉴点亮 N 种后自动解锁
+const UNLOCK_REQ = { peach:4, bamboo:6, lake:8 };
+
+const EXITS = {
+  camp:  [ {to:"valley", cost:1, x:975, y:330, label:"溪谷"}, {to:"slope", cost:2, x:520, y:58,  label:"向阳坡"} ],
+  valley:[ {to:"camp", cost:1, x:65,  y:330, label:"营地"}, {to:"forest", cost:2, x:975, y:330, label:"密林"}, {to:"peach", cost:1, x:520, y:58, label:"桃花谷"} ],
+  slope: [ {to:"camp", cost:2, x:520, y:575, label:"营地"} ],
+  forest:[ {to:"valley", cost:2, x:65,  y:330, label:"溪谷"}, {to:"swamp", cost:1, x:975, y:330, label:"沼泽"}, {to:"bamboo", cost:1, x:520, y:58, label:"月竹林"} ],
+  swamp: [ {to:"forest", cost:1, x:65,  y:330, label:"密林"}, {to:"lake", cost:1, x:975, y:330, label:"星光湖"} ],
+  peach: [ {to:"valley", cost:1, x:520, y:575, label:"溪谷"} ],
+  bamboo:[ {to:"forest", cost:1, x:520, y:575, label:"密林"} ],
+  lake:  [ {to:"swamp", cost:1, x:65,  y:330, label:"沼泽"} ]
+};
+const ENTRY = {
+  "camp>valley":{x:850,y:230},  "forest>valley":{x:150,y:500},
+  "camp>slope":{x:750,y:470},
+  "valley>forest":{x:150,y:230}, "swamp>forest":{x:850,y:500},
+  "forest>swamp":{x:150,y:230},
+  "valley>camp":{x:780,y:500},   "slope>camp":{x:700,y:500},
+  "valley>peach":{x:520,y:500},  "peach>valley":{x:520,y:130},
+  "forest>bamboo":{x:520,y:500}, "bamboo>forest":{x:520,y:130},
+  "swamp>lake":{x:880,y:330},    "lake>swamp":{x:150,y:330}
+};
+
+const PLANTS = [
+  { id:"fern",     name:"露珠蕨",   icon:"🌿", region:"valley", period:0,  rarity:"common", spr:"fern",    col:"#6fc46f", desc:"叶尖终日凝着一颗露珠，日照一强便悄悄收起。" },
+  { id:"mossm",    name:"银线苔",   icon:"☘️", region:"valley", period:-1, rarity:"common", spr:"moss",    col:"#b8e08a", desc:"石面上银白色的脉络，全天都能找到。" },
+  { id:"iris",     name:"溪畔鸢尾", icon:"💠", region:"valley", period:1,  rarity:"common", spr:"flower",  col:"#8aa0f0", desc:"只在水汽最盛的正午绽开蓝紫色花朵。" },
+  { id:"violet",   name:"晨曦堇",   icon:"🌸", region:"slope",  period:0,  rarity:"common", spr:"flower",  col:"#f49ab8", desc:"只在清晨的薄光里开放，太阳一升高就闭合。" },
+  { id:"orchid",   name:"金穗兰",   icon:"🌾", region:"slope",  period:1,  rarity:"common", spr:"wheat",   col:"#ffd96e", desc:"正午的向阳坡上，像撒了一地碎金。" },
+  { id:"snow",     name:"岩缝雪莲", icon:"❄️", region:"slope",  period:2,  rarity:"rare",   spr:"flower",  col:"#d8f2fc", desc:"黄昏时岩缝里透出微光的稀有雪莲。" },
+  { id:"shoot",    name:"影木嫩芽", icon:"🌱", region:"forest", period:1,  rarity:"common", spr:"sprout",  col:"#8fda72", desc:"密林深处，正午才被漏下的光斑照亮的嫩芽。" },
+  { id:"bell",     name:"幽影铃兰", icon:"🔔", region:"forest", period:2,  rarity:"rare",   spr:"bell",    col:"#7a8cb0", desc:"黄昏里摇曳的黑色铃铛，几乎不发出声音。" },
+  { id:"lamp",     name:"灯芯菇",   icon:"🍄", region:"forest", period:3,  rarity:"rare",   spr:"mushroom",col:"#ffcf5e", desc:"夜晚发出幽幽荧光的蘑菇，是夜行者的路标。" },
+  { id:"mistf",    name:"雾露花",   icon:"🌫️", region:"swamp",  period:2,  rarity:"rare",   spr:"flower",  col:"#d3a8e6", desc:"花瓣上永远裹着一层散不去的沼泽雾气。" },
+  { id:"moonmoss", name:"沼泽月藓", icon:"🌙", region:"swamp",  period:3,  rarity:"common", spr:"moss",    col:"#d8eebc", desc:"只在月光下泛银的苔藓，夜晚格外常见。" },
+  { id:"duck",     name:"浮幽萍",   icon:"💧", region:"swamp",  period:-1, rarity:"common", spr:"pad",     col:"#92d69c", desc:"漂在水面上的半透明浮萍，全天可见。" },
+  { id:"peachb",   name:"桃夭瓣",   icon:"🌺", region:"peach",  period:0,  rarity:"common", spr:"flower",  col:"#ffb0c4", desc:"清晨落下的桃瓣还带着夜里的甜露，香香的。" },
+  { id:"pinkbell", name:"粉铃草",   icon:"🎐", region:"peach",  period:2,  rarity:"rare",   spr:"bell",    col:"#f6a8c8", desc:"黄昏的风一吹，整片桃花谷都听得见铃声。" },
+  { id:"bambooDew",name:"竹露芽",   icon:"🎋", region:"bamboo", period:1,  rarity:"common", spr:"sprout",  col:"#a8e07a", desc:"正午的光从竹叶间漏下来，芽尖挂着一颗露水。" },
+  { id:"moonshoot",name:"月笋",     icon:"🎍", region:"bamboo", period:3,  rarity:"rare",   spr:"sprout",  col:"#e8e4c8", desc:"只在月光下悄悄拔节的稀有竹笋，摸起来凉凉的。" },
+  { id:"staralgae",name:"星芒藻",   icon:"⭐", region:"lake",   period:3,  rarity:"common", spr:"moss",    col:"#9fd8e8", desc:"夜晚湖边浅滩上，像撒了一把碎星星。" },
+  { id:"moonlotus",name:"银月莲",   icon:"🪷", region:"lake",   period:2,  rarity:"rare",   spr:"pad",     col:"#e8ecf8", desc:"黄昏的湖心浮着一朵会发光的白莲，安安静静。" }
+];
+
+// 森林里的朋友（每区域一位，按时段说不同的话）
+const NPCS = {
+  camp: { id:"grandpa", name:"露营的爷爷", x:660, y:352, look:"grandpa", lines:[
+    "早安啊，小家伙。想好今天先去哪儿了吗？体力可只有 12 点。",
+    "正午的阳光最适合晒标本啦，别急着赶路。",
+    "黄昏的时候，向阳坡的岩缝里会有雪莲发光哟。",
+    "夜里别贪走，赶不回来标本要受潮的。篝火一直给你留着。"
+  ]},
+  valley: { id:"granny", name:"采药婆婆", x:240, y:240, look:"granny", lines:[
+    "清晨的溪谷呀，蕨叶上全是露水珠，亮晶晶的……",
+    "正午鸢尾开得最好看，去水边慢慢找找吧。",
+    "婆婆我年轻时也走过密林，铃兰要在黄昏才肯摇呢。",
+    "夜里婆婆要回家咯，你也早点收工，路上慢点走。"
+  ]},
+  slope: { id:"girl", name:"牧羊少女", x:760, y:170, look:"girl", lines:[
+    "清晨的堇菜花只开一小会儿，手可要快一点！",
+    "羊儿说正午的草坡金灿灿的，像撒了一地麦子。",
+    "黄昏去岩石缝那里看看吧，听说雪莲在等有缘人。",
+    "夜晚的坡上很安静，星星低得像一伸手就能摘到。"
+  ]},
+  forest: { id:"ranger", name:"守林人", x:560, y:300, look:"ranger", lines:[
+    "密林只有正午才有光斑照进来，嫩芽就藏在光里。",
+    "黄昏的铃兰会轻轻摇，别只顾着低头赶路。",
+    "夜里跟着萤火虫走，它们聚在一起的地方就有灯芯菇。",
+    "夜里小心脚下……不过迷路了的话，就来找我。"
+  ]},
+  swamp: { id:"fox", name:"小狐狸", x:380, y:420, look:"fox", lines:[
+    "（小狐狸歪着头看你）呀……要找雾里的花吗？黄昏来就对了。",
+    "（小狐狸的尾巴摇啊摇）月藓在夜里会发光哦，亮晶晶的。",
+    "（小狐狸眯起眼睛）浮萍一直都在的，慢慢找，不着急。",
+    "（小狐狸蜷成一团，尾巴盖住鼻子）呼……夜里的雾会唱歌哦。"
+  ]},
+  peach: { id:"poet", name:"赏花的诗人", x:300, y:200, look:"poet", lines:[
+    "（诗人望着桃花）清晨的桃瓣落在纸上，比墨还好看……",
+    "风一过，花瓣就下起雪来。你身上的标本夹都染香啦。",
+    "黄昏时分听听看——粉铃草摇起来，是山谷在唱歌。",
+    "夜里诗人要就着月光写诗了。你也早些回营地，晚安。"
+  ]},
+  bamboo: { id:"flutist", name:"吹笛的少年", x:640, y:280, look:"flutist", lines:[
+    "（笛声停了一拍）早安，竹叶上的露水还没干呢。",
+    "正午的光斑落在竹芽上，找找看，亮晶晶的那颗。",
+    "月亮升起来以后，笋会咔啦咔啦地长——你听！",
+    "（少年又吹起笛子）夜里的竹林很安全，有我陪着竹子们。"
+  ]},
+  lake: { id:"kitten", name:"看星星的小猫", x:420, y:250, look:"kitten", lines:[
+    "（小猫甩甩尾巴）喵～湖边清晨有星星掉下来变成的藻。",
+    "（耳朵动了动）我中午在补觉……水鸟说浅滩上有宝。",
+    "（小猫盯着湖面）黄昏时湖心会浮一朵白莲花哦。",
+    "（小猫的尾巴指着天上）星星落进湖里，就成了碎碎的光。"
+  ]}
+};
+
+// ================= 状态 =================
+const SAVE_KEY = "forestDexWalkSave";
+let S = load();
+let logArr = [];
+let pendingFound = null;
+
+function load(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) { const d = JSON.parse(raw); if (d && d.dex){ if (!d.unlocked) d.unlocked = {}; return d; } }
+  } catch(e){}
+  return { day:1, energy:MAXE, pos:"camp", bag:[], dex:{}, unlocked:{}, won:false };
+}
+function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){} }
+function timeIdx(){ return Math.min(3, Math.floor((MAXE - S.energy)/3)); }
+function dexOf(id){ return S.dex[id] || 0; }
+function dexCount(){ return PLANTS.filter(p => dexOf(p.id)===2).length; }
+function isUnlocked(sceneId){ return !UNLOCK_REQ[sceneId] || !!S.unlocked[sceneId]; }
+function unlockText(sceneId){
+  if (isUnlocked(sceneId)) return "";
+  return "🔒 需点亮 " + UNLOCK_REQ[sceneId] + " 种（已 " + dexCount() + "）";
+}
+function checkUnlocks(){
+  const c = dexCount();
+  for (const [sid, req] of Object.entries(UNLOCK_REQ)){
+    if (c >= req && !S.unlocked[sid]){
+      S.unlocked[sid] = true;
+      log("🎉 解锁了新区域：" + SCENES[sid].emoji + SCENES[sid].name + "！木牌已经为你亮起。");
+      save();
+      renderExitLabels();
+    }
+  }
+}
+function plantById(id){ return PLANTS.find(p => p.id === id); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function log(m){ logArr.unshift(m); if (logArr.length>40) logArr.pop(); }
+
+// ================= 运行时 =================
+const rt = {
+  player: { x:520, y:330, face:1, walkT:0 },
+  target: null,
+  path: null,
+  intent: null,
+  clickFx: null,
+  plants: [],
+  decor: {},
+  arriveGuard: 0,
+  stuck: 0,
+  dialog: null
+};
+
+const WALK_SPEED = 1.8; // 治愈系慢步速
+
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// 离屏低分辨率画布
+const off = document.createElement("canvas");
+off.width = W/PS; off.height = H/PS;
+const octx = off.getContext("2d");
+octx.imageSmoothingEnabled = false;
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+// ---- 场景装饰与障碍（更大更密）----
+function buildDecor(sceneId){
+  if (rt.decor[sceneId]) return rt.decor[sceneId];
+  const seed = { camp:11, valley:22, slope:33, forest:44, swamp:55, peach:66, bamboo:77, lake:88 }[sceneId];
+  const rnd = mulberry32(seed);
+  let obs = [], deco = [];
+  const addTrees = (n, x0, x1, y0, y1, s0, s1, dead) => {
+    for (let i=0;i<n;i++){
+      const x = x0 + rnd()*(x1-x0), y = y0 + rnd()*(y1-y0), s = s0 + rnd()*(s1-s0);
+      obs.push({x,y,r:10+s*0.5,kind: dead?"deadtree":"tree",s,hu:rnd()});
+    }
+  };
+  const addRocks = (n, x0, x1, y0, y1, s0, s1) => {
+    for (let i=0;i<n;i++){
+      const x = x0 + rnd()*(x1-x0), y = y0 + rnd()*(y1-y0), s = s0 + rnd()*(s1-s0);
+      obs.push({x,y,r:8+s*0.5,kind:"rock",s,rot:rnd()*6.28});
+    }
+  };
+  if (sceneId==="camp"){
+    addTrees(8, 30,260, 60,560, 30,46);
+    addTrees(3, 760,1000, 60,200, 28,40);
+    addRocks(4, 760,960, 380,560, 14,22);
+    obs.push({x:300,y:548,r:12,kind:"crate"});
+    obs.push({x:340,y:560,r:12,kind:"crate"});
+    deco.push({kind:"tent",x:470,y:548},{kind:"fire",x:400,y:345},{kind:"log",x:620,y:548});
+    deco.push({kind:"fence",x:640,y:150,n:7});
+    for(let i=0;i<18;i++) deco.push({kind:"bush",x:60+rnd()*920,y:60+rnd()*500,s:8+rnd()*9});
+    for(let i=0;i<14;i++) deco.push({kind:"flowerpatch",x:120+rnd()*800,y:80+rnd()*460,c:rnd(),s:9+rnd()*9});
+  } else if (sceneId==="valley"){
+    addTrees(14, 30,1000, 40,160, 30,48);
+    addTrees(8, 30,1000, 540,600, 26,40);
+    addRocks(9, 140,900, 220,400, 10,18);
+    deco.push({kind:"stream",y:460});
+    for(let i=0;i<16;i++) deco.push({kind:"reed",x:60+rnd()*920,y:444+rnd()*18});
+    for(let i=0;i<20;i++) deco.push({kind:"bush",x:60+rnd()*920,y:180+rnd()*240,s:7+rnd()*8});
+    for(let i=0;i<10;i++) deco.push({kind:"flowerpatch",x:80+rnd()*880,y:180+rnd()*220,c:rnd(),s:9+rnd()*8});
+  } else if (sceneId==="slope"){
+    addRocks(13, 90,950, 90,540, 16,26);
+    addTrees(6, 40,240, 420,590, 24,34);
+    addTrees(3, 820,1000, 420,590, 24,34);
+    deco.push({kind:"path",x:520,y:320});
+    for(let i=0;i<32;i++) deco.push({kind:"flowerpatch",x:60+rnd()*920,y:60+rnd()*500,c:rnd(),s:10+rnd()*10});
+    for(let i=0;i<14;i++) deco.push({kind:"bush",x:60+rnd()*920,y:60+rnd()*500,s:7+rnd()*7});
+  } else if (sceneId==="forest"){
+    addTrees(28, 40,990, 50,580, 34,58);
+    addTrees(8, 40,990, 50,580, 24,34);
+    addRocks(5, 120,900, 140,520, 12,20);
+    for(let i=0;i<36;i++) deco.push({kind:"fernpatch",x:40+rnd()*950,y:40+rnd()*540,s:8+rnd()*9});
+    for(let i=0;i<10;i++) deco.push({kind:"bush",x:40+rnd()*950,y:40+rnd()*540,s:7+rnd()*7});
+  } else if (sceneId==="peach"){
+    for (let i=0;i<18;i++){
+      const x = 40 + rnd()*940, y = 60 + rnd()*520, s = 30 + rnd()*20;
+      obs.push({x,y,r:10+s*0.5,kind:"peachtree",s,hu:rnd()});
+    }
+    addRocks(4, 100,940, 120,520, 10,16);
+    deco.push({kind:"path",x:520,y:330});
+    for(let i=0;i<24;i++) deco.push({kind:"flowerpatch",x:60+rnd()*920,y:60+rnd()*500,c:rnd(),s:9+rnd()*9});
+    for(let i=0;i<12;i++) deco.push({kind:"bush",x:60+rnd()*920,y:60+rnd()*500,s:7+rnd()*7});
+  } else if (sceneId==="bamboo"){
+    for (let i=0;i<24;i++){
+      const x = 40 + rnd()*940, y = 60 + rnd()*520, s = 34 + rnd()*22;
+      obs.push({x,y,r:8+s*0.35,kind:"bamboo",s,hu:rnd()});
+    }
+    addRocks(4, 120,900, 120,500, 10,16);
+    for(let i=0;i<20;i++) deco.push({kind:"fernpatch",x:40+rnd()*950,y:40+rnd()*540,s:7+rnd()*8});
+    for(let i=0;i<8;i++) deco.push({kind:"bush",x:40+rnd()*950,y:40+rnd()*540,s:6+rnd()*6});
+  } else if (sceneId==="lake"){
+    deco.push({kind:"lakewater"});
+    addRocks(6, 60,960, 80,300, 10,18);
+    for(let i=0;i<14;i++) deco.push({kind:"reed",x:40+rnd()*940,y:300+rnd()*50});
+    for(let i=0;i<10;i++) deco.push({kind:"flowerpatch",x:60+rnd()*920,y:70+rnd()*240,c:rnd(),s:9+rnd()*8});
+    for(let i=0;i<8;i++) deco.push({kind:"bush",x:40+rnd()*950,y:60+rnd()*260,s:7+rnd()*7});
+  } else {
+    addTrees(16, 40,990, 50,560, 34,52, true);
+    for(let i=0;i<10;i++){ const x=60+rnd()*880,y=80+rnd()*460; obs.push({x,y,r:14+rnd()*10,kind:"pool"}); }
+    for(let i=0;i<24;i++) deco.push({kind:"reed",x:40+rnd()*940,y:60+rnd()*500});
+    for(let i=0;i<14;i++) deco.push({kind:"mudpatch",x:60+rnd()*900,y:60+rnd()*500,s:14+rnd()*14});
+    for(let i=0;i<10;i++) deco.push({kind:"bush",x:40+rnd()*950,y:40+rnd()*540,s:7+rnd()*7});
+  }
+  // 保证出口 / 入口附近畅通
+  const clearPts = EXITS[sceneId].map(e=>({x:e.x,y:e.y}))
+    .concat(Object.entries(ENTRY).filter(([k])=>k.endsWith(">"+sceneId)).map(([,v])=>v));
+  obs = obs.filter(o => clearPts.every(cp => Math.hypot(o.x-cp.x, o.y-cp.y) > o.r + 48));
+  // NPC 处留出站位
+  const npc = NPCS[sceneId];
+  if (npc) obs = obs.filter(o => Math.hypot(o.x-npc.x, o.y-npc.y) > o.r + 40);
+  if (npc) obs.push({x:npc.x, y:npc.y, r:14, kind:"npc", look:npc.look});
+  // 湖面不可行走（放在出口清理之后，保证不会被误删）
+  if (sceneId==="lake"){
+    [80,340,600,860].forEach(x => obs.push({x, y:520, r:150, kind:"waterblock"}));
+    obs.push({x:1030, y:520, r:80, kind:"waterblock"});
+  }
+  const d = { obs, deco };
+  d.ground = makeGround(sceneId, rnd);
+  d.block = buildBlockGrid(obs);
+  return rt.decor[sceneId] = d;
+}
+
+// ---- 寻路网格与 A* ----
+function buildBlockGrid(obs){
+  const cs = 8, cols = Math.ceil(W/cs), rows = Math.ceil(H/cs);
+  const g = new Uint8Array(cols*rows);
+  for (let gy=0; gy<rows; gy++){
+    for (let gx=0; gx<cols; gx++){
+      const x = gx*cs+cs/2, y = gy*cs+cs/2;
+      if (obs.some(o => Math.hypot(x-o.x, y-o.y) < o.r + PR + 2)) g[gy*cols+gx] = 1;
+    }
+  }
+  return { cs, cols, rows, g };
+}
+
+function nearestFreeCell(cx, cy, block){
+  const { cols, rows, g } = block;
+  if (!g[cy*cols+cx]) return [cx, cy];
+  for (let r=1; r<12; r++){
+    for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){
+      const x=cx+dx, y=cy+dy;
+      if (x>=0 && y>=0 && x<cols && y<rows && !g[y*cols+x]) return [x,y];
+    }
+  }
+  return [cx, cy];
+}
+
+function findPath(sx, sy, gx, gy, block){
+  const { cs, cols, rows, g } = block;
+  const id = (x,y)=> y*cols+x;
+  const cellOf = (wx,wy)=> [Math.max(0,Math.min(cols-1,Math.floor(wx/cs))), Math.max(0,Math.min(rows-1,Math.floor(wy/cs)))];
+  let [scx,scy] = nearestFreeCell(...cellOf(sx,sy), block);
+  let [gcx,gcy] = nearestFreeCell(...cellOf(gx,gy), block);
+  const si = id(scx,scy), gi = id(gcx,gcy);
+  if (si === gi) return [];
+  const open = [{x:scx, y:scy, g:0, f:Math.hypot(gcx-scx, gcy-scy)}];
+  const came = new Map(), gs = new Map([[si, 0]]), closed = new Set();
+  const DIRS = [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.42],[1,-1,1.42],[-1,1,1.42],[-1,-1,1.42]];
+  let found = false, guard = 0;
+  while (open.length && guard++ < 30000){
+    // 取 f 最小的节点
+    let bi = 0;
+    for (let k=1;k<open.length;k++) if (open[k].f < open[bi].f) bi = k;
+    const cur = open.splice(bi,1)[0];
+    const ci = id(cur.x,cur.y);
+    if (closed.has(ci)) continue;
+    closed.add(ci);
+    if (ci === gi){ found = true; break; }
+    for (const [dx,dy,dc] of DIRS){
+      const nx=cur.x+dx, ny=cur.y+dy;
+      if (nx<0||ny<0||nx>=cols||ny>=rows || g[id(nx,ny)]) continue;
+      if (dx&&dy && (g[id(cur.x+dx,cur.y)] || g[id(cur.x,cur.y+dy)])) continue; // 禁止斜穿缝隙
+      const ni = id(nx,ny), ng = cur.g + dc;
+      if (ng < (gs.get(ni) ?? 1e9)){
+        gs.set(ni, ng);
+        came.set(ni, ci);
+        open.push({x:nx, y:ny, g:ng, f:ng + Math.hypot(gcx-nx, gcy-ny)});
+      }
+    }
+  }
+  if (!found) return null;
+  const cells = [];
+  let ci = gi;
+  while (ci !== undefined && ci !== si){ cells.push(ci); ci = came.get(ci); }
+  cells.reverse();
+  return cells.map(i => ({x:(i%cols)*cs+cs/2, y:Math.floor(i/cols)*cs+cs/2}));
+}
+
+function lineFree(a, b, obs){
+  const steps = Math.max(1, Math.ceil(Math.hypot(b.x-a.x, b.y-a.y)/6));
+  for (let s=1;s<steps;s++){
+    const x = a.x+(b.x-a.x)*s/steps, y = a.y+(b.y-a.y)*s/steps;
+    if (obs.some(o => Math.hypot(x-o.x, y-o.y) < o.r + PR)) return false;
+  }
+  return true;
+}
+
+function smoothPath(path, obs){
+  if (!path || path.length < 3) return path;
+  const out = [path[0]];
+  let i = 0;
+  while (i < path.length-1){
+    let j = path.length-1;
+    for (; j > i+1; j--){ if (lineFree(path[i], path[j], obs)) break; }
+    out.push(path[j]);
+    i = j;
+  }
+  return out;
+}
+
+function setPathDest(x, y, intent){
+  const { obs, block } = buildDecor(S.pos);
+  rt.clickFx = { x, y, t0: performance.now() };
+  const raw = findPath(rt.player.x, rt.player.y, x, y, block);
+  rt.target = null; rt.targetTalk = null;
+  if (!raw){ // 极少数找不到路时退回直线模式
+    rt.path = null; rt.intent = intent || null;
+    rt.target = {x, y};
+    return;
+  }
+  rt.path = smoothPath(raw, obs);
+  rt.intent = intent || null;
+}
+
+// ---- 预渲染像素地面（治愈柔和色调）----
+function makeGround(sceneId, rnd){
+  const g = document.createElement("canvas");
+  g.width = W/PS; g.height = H/PS;
+  const c = g.getContext("2d");
+  const px = (x,y,w,h,col) => { c.fillStyle = col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  const bases = {
+    camp:  ["#95cf85","#88c278","#a3d992"],
+    valley:["#8cc980","#7fbb73","#99d68c"],
+    slope: ["#b8d882","#abcC75","#c5e28f".toLowerCase()],
+    forest:["#63975c","#568952","#70a467"],
+    swamp: ["#7fa074","#739369","#8aae80"],
+    peach: ["#a6d69a","#98cb8b","#b4e0a6"],
+    bamboo:["#8fca7a","#82bd6d","#9ed68a"],
+    lake:  ["#8cc48e","#7fb880","#99d19a"]
+  }[sceneId];
+  px(0,0,W,H,bases[0]);
+  for (let i=0;i<2000;i++){
+    const x = rnd()*W, y = rnd()*H;
+    px(x, y, PS, PS, rnd()<0.5 ? bases[1] : bases[2]);
+  }
+  if (sceneId==="valley"){
+    px(0,448,W,82,"#d4bd8e");            // 沙岸
+    px(0,456,W,72,"#8fc8e2");            // 水
+    px(0,456,W,4,"#c2e6f4");             // 水面高光
+  }
+  if (sceneId==="swamp"){
+    for (let i=0;i<6;i++){
+      const x=40+rnd()*900, y=60+rnd()*480, w=100+rnd()*90;
+      px(x,y,w,28,"#9a8a6a"); px(x+4,y+4,w-8,20,"#6f9488"); px(x+8,y+7,w-16,12,"#5f847c");
+    }
+    for (let i=0;i<360;i++) px(rnd()*W, rnd()*H, PS, PS, rnd()<0.5?"#6d8a63":"#8aa879");
+  }
+  if (sceneId==="slope"){
+    for (let i=0;i<14;i++){
+      const x=rnd()*920, y=rnd()*540;
+      px(x,y,60+rnd()*40,22+rnd()*16,"#c8e392");
+    }
+    px(440,290,180,70,"#dcc992"); px(452,298,156,54,"#e8d8a4"); // 小径
+  }
+  if (sceneId==="camp"){
+    px(340,500,320,95,"#c9ab7e"); px(360,512,280,72,"#dbbf92"); // 泥地
+    for (let i=0;i<260;i++) px(rnd()*W, rnd()*H, PS, PS, rnd()<0.5?"#88c278":"#a3d992");
+  }
+  if (sceneId==="forest"){
+    for (let i=0;i<380;i++) px(rnd()*W, rnd()*H, PS, PS, rnd()<0.5?"#568952":"#78aa6c");
+  }
+  if (sceneId==="peach"){
+    for (let i=0;i<90;i++){
+      const x=rnd()*W, y=rnd()*H;
+      px(x,y,14+rnd()*26,7+rnd()*8,"rgba(255,178,200,0.5)");
+      if (rnd()<0.4) px(x+8,y+2,6,5,"rgba(255,225,235,0.6)");
+    }
+  }
+  if (sceneId==="bamboo"){
+    for (let i=0;i<120;i++){
+      const x=rnd()*W, y=rnd()*H;
+      px(x,y,10+rnd()*16,3,"rgba(200,220,150,0.55)");
+    }
+  }
+  if (sceneId==="lake"){
+    px(0,334,W,10,"#d8ca96");            // 湖岸沙
+    px(0,344,W,276,"#8ec6e0");           // 湖面
+    px(0,344,W,4,"#c8e8f2");             // 湖面高光
+    for (let i=0;i<200;i++) px(rnd()*W, 344+rnd()*270, PS, PS, rnd()<0.5?"#84b8d4":"#9dd2e8");
+  }
+  return g;
+}
+
+// ---- 植物刷新 ----
+function spawnPlants(){
+  const t = timeIdx();
+  const pool = PLANTS.filter(p => p.region===S.pos && dexOf(p.id)<2 && (p.period===t || p.period===-1));
+  shuffle(pool);
+  const { obs } = buildDecor(S.pos);
+  const exits = EXITS[S.pos];
+  const list = [];
+  for (const p of pool){
+    if (list.length>=4) break;
+    const ch = p.rarity==="rare" ? 0.45 : 0.8;
+    if (Math.random() > ch) continue;
+    let x=0,y=0,ok=false;
+    for (let a=0;a<80 && !ok;a++){
+      x = 70 + Math.random()*(W-140);
+      y = 80 + Math.random()*(H-160);
+      ok = obs.every(o => Math.hypot(x-o.x,y-o.y) > o.r+34) &&
+           exits.every(e => Math.hypot(x-e.x,y-e.y) > 100) &&
+           Object.values(NPCS).every(n => Math.hypot(x-n.x,y-n.y) > 90);
+    }
+    if (ok) list.push({id:p.id,x,y});
+  }
+  rt.plants = list;
+}
+
+// ================= 行动 =================
+function enterScene(from){
+  buildDecor(S.pos);
+  spawnPlants();
+  const e = ENTRY[from + ">" + S.pos] || {x:W/2,y:H/2};
+  rt.player.x = e.x; rt.player.y = e.y; rt.target = null;
+  rt.dialog = null;
+  rt.arriveGuard = Date.now() + 1100;
+  log("🚶 来到了" + SCENES[S.pos].name + "（现在是" + PERIODS[timeIdx()] + "）");
+  renderExitLabels();
+}
+
+function doMove(to, cost){
+  if (to===S.pos) return;
+  if (!isUnlocked(to)){
+    const req = UNLOCK_REQ[to];
+    log("🔒 " + SCENES[to].name + " 还没解锁——把图鉴点亮到 " + req + " 种再来吧（目前已点亮 " + dexCount() + " 种）。");
+    renderUI(); return;
+  }
+  if (cost > S.energy) { log("🚫 体力不够走到" + SCENES[to].name + "了，考虑收工返营吧。"); renderUI(); return; }
+  const oldT = timeIdx();
+  S.energy -= cost;
+  const from = S.pos;
+  S.pos = to;
+  enterScene(from);
+  afterAction(oldT);
+}
+
+function tryPick(){
+  const p = nearestPlant();
+  if (!p) return;
+  if (S.energy<=0) return;
+  S.energy -= 1;
+  const oldT = timeIdx();
+  const plant = plantById(p.id);
+  if (S.bag.length < BAGMAX){
+    collect(p.id);
+    rt.plants = rt.plants.filter(q => q!==p);
+    afterAction(oldT);
+  } else {
+    pendingFound = plant;
+    rt.pendingPlant = p;
+    openBagModal(plant);
+    renderUI();
+  }
+}
+
+function nearestPlant(){
+  let best=null, bd=52;
+  for (const p of rt.plants){
+    const d = Math.hypot(rt.player.x-p.x, rt.player.y-p.y);
+    if (d<bd){ bd=d; best=p; }
+  }
+  return best;
+}
+
+function nearestNPC(){
+  const npc = NPCS[S.pos];
+  if (!npc) return null;
+  const d = Math.hypot(rt.player.x-npc.x, rt.player.y-npc.y);
+  return d < 72 ? npc : null;
+}
+
+function tryTalk(){
+  const npc = nearestNPC();
+  if (!npc) return;
+  rt.dialog = { npcId:npc.id, until: Date.now() + 8000 };
+}
+
+function collect(id){
+  S.bag.push(id);
+  S.dex[id] = 2;
+  log("🌿 采集到「" + plantById(id).name + "」，装入标本夹（" + S.bag.length + "/" + BAGMAX + "）");
+}
+
+function replaceBag(idx){
+  if (!pendingFound) return;
+  const removed = plantById(S.bag[idx]);
+  S.bag.splice(idx,1);
+  collect(pendingFound.id);
+  log("🔁 丢弃了「" + removed.name + "」，换上了「" + pendingFound.name + "」。");
+  pendingFound = null;
+  rt.plants = rt.plants.filter(q => q!==rt.pendingPlant);
+  rt.pendingPlant = null;
+  closeOverlay("bagOverlay");
+  afterAction(-1);
+}
+
+function declineFound(){
+  if (!pendingFound) return;
+  if (dexOf(pendingFound.id) < 1) S.dex[pendingFound.id] = 1;
+  log("🙋 夹满了，目送「" + pendingFound.name + "」留在原地（图鉴留下剪影）。");
+  pendingFound = null; rt.pendingPlant = null;
+  closeOverlay("bagOverlay");
+  renderUI();
+}
+
+function afterAction(oldT){
+  save();
+  const t = timeIdx();
+  if (oldT>=0 && t!==oldT){
+    log("🕰 时光流转，进入" + PERIODS[t] + "。植物的出现也变了……");
+    spawnPlants();
+  }
+  checkUnlocks();
+  if (S.energy<=0){
+    log("🌑 体力耗尽，被迫就地收工……");
+    endTrip(true);
+  } else {
+    renderUI();
+  }
+}
+
+function endTrip(forced){
+  const atCamp = S.pos==="camp";
+  const daysUsed = S.day;
+  let lostMsg = "";
+  const kept = [];
+  if (!atCamp && S.bag.length){
+    const bag = shuffle(S.bag.slice());
+    const nLost = Math.floor(bag.length/2);
+    const lost = bag.slice(0,nLost);
+    bag.slice(nLost).forEach(id=>kept.push(id));
+    if (nLost>0) lostMsg = "⚠️ 不在营地收工，" + nLost + " 份标本受潮损毁（" + lost.map(id=>plantById(id).name).join("、") + "）。";
+  } else {
+    S.bag.forEach(id=>kept.push(id));
+  }
+  S.bag = [];
+  log("─────");
+  log(forced ? "⛺ 第 " + daysUsed + " 天考察结束（体力耗尽）。" : "⛺ 第 " + daysUsed + " 天考察结束，返回营地。");
+  if (lostMsg) log(lostMsg);
+  if (kept.length) log("📚 入库标本：" + kept.map(id=>plantById(id).name).join("、"));
+  S.day += 1; S.energy = MAXE; S.pos = "camp";
+  save();
+  checkWin(daysUsed);
+  enterScene("");
+  renderUI();
+}
+
+function checkWin(daysUsed){
+  if (PLANTS.every(p=>dexOf(p.id)===2) && !S.won){
+    S.won = true; save();
+    let stars,title;
+    if (daysUsed<=4){ stars="★★★"; title="传奇植物学家"; }
+    else if (daysUsed<=7){ stars="★★☆"; title="资深考察员"; }
+    else { stars="★☆☆"; title="兴致勃勃的业余爱好者"; }
+    document.getElementById("winText").innerHTML = "你用 <b style='color:#d98a3d'>"+daysUsed+"</b> 天走遍了" + Object.keys(SCENES).length + " 个区域，点亮了全部 " + PLANTS.length + " 条图鉴。森林里的朋友们都为你高兴。";
+    document.getElementById("winStars").textContent = stars + " " + title;
+    openOverlay("winOverlay");
+  }
+}
+
+function resetGame(){
+  if (!confirm("确定要重置全部进度吗？")) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+// ================= 输入 =================
+const keys = {};
+window.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","e","q"].includes(k)){
+    e.preventDefault();
+    keys[k]=true;
+    if (k==="e") tryPick();
+    if (k==="q") tryTalk();
+  }
+});
+window.addEventListener("keyup", e => { keys[e.key.toLowerCase()]=false; });
+
+cv.addEventListener("click", e => {
+  const r = cv.getBoundingClientRect();
+  const mx = (e.clientX-r.left) * (W/r.width);
+  const my = (e.clientY-r.top) * (H/r.height);
+  // 点植物 → 走过去自动采集
+  for (const p of rt.plants){
+    if (Math.hypot(mx-p.x, my-p.y) < 36){
+      if (Math.hypot(rt.player.x-p.x, rt.player.y-p.y) < 56){ tryPick(); return; }
+      setPathDest(p.x, p.y, "pick");
+      return;
+    }
+  }
+  // 点朋友 → 走过去自动聊天
+  const npc = NPCS[S.pos];
+  if (npc && Math.hypot(mx-npc.x, my-npc.y) < 48){
+    if (Math.hypot(rt.player.x-npc.x, rt.player.y-npc.y) < 72){ tryTalk(); return; }
+    const d = Math.hypot(rt.player.x-npc.x, rt.player.y-npc.y) || 1;
+    setPathDest(npc.x + (rt.player.x-npc.x)/d*46, npc.y + (rt.player.y-npc.y)/d*46, "talk");
+    return;
+  }
+  // 点木牌 → 走过去自动赶路
+  for (const ex of EXITS[S.pos]){
+    if (Math.hypot(mx-ex.x, my-(ex.y-8)) < 44){
+      if (Math.hypot(rt.player.x-ex.x, rt.player.y-ex.y) < 32){ doMove(ex.to, ex.cost); return; }
+      setPathDest(ex.x, ex.y, "exit");
+      return;
+    }
+  }
+  // 点空地 → 走过去
+  setPathDest(mx, my, null);
+});
+
+function moveStep(dx,dy){
+  const p = rt.player;
+  if (dx) p.face = dx>0?1:-1;
+  const { obs } = buildDecor(S.pos);
+  const blocked = (x,y) => obs.some(o => Math.hypot(x-o.x, y-o.y) < o.r + PR);
+  let nx = p.x+dx, ny = p.y+dy;
+  let moved = false;
+  if (!blocked(nx, p.y)){ p.x = nx; moved = true; }
+  if (!blocked(p.x, ny)){ p.y = ny; moved = true; }
+  p.x = Math.max(24, Math.min(W-24, p.x));
+  p.y = Math.max(24, Math.min(H-24, p.y));
+  if (moved) p.walkT += 0.12;
+  return moved;
+}
+
+function resolveIntent(){
+  if (rt.intent === "pick") tryPick();
+  else if (rt.intent === "talk") tryTalk();
+  rt.intent = null;
+}
+
+function gameTick(){
+  const p = rt.player;
+  let dx=0, dy=0;
+  if (keys["arrowleft"]||keys["a"]) dx-=1;
+  if (keys["arrowright"]||keys["d"]) dx+=1;
+  if (keys["arrowup"]||keys["w"]) dy-=1;
+  if (keys["arrowdown"]||keys["s"]) dy+=1;
+  if (dx||dy){
+    // 键盘仍可用（可选）：手动移动会取消自动寻路
+    rt.path = null; rt.intent = null; rt.target = null;
+    const l = Math.hypot(dx,dy);
+    moveStep(dx/l*WALK_SPEED, dy/l*WALK_SPEED);
+  } else if (rt.path){
+    if (rt.path.length === 0){
+      rt.path = null;
+      resolveIntent();
+    } else {
+      const wp = rt.path[0];
+      const d = Math.hypot(wp.x-p.x, wp.y-p.y);
+      if (d < 9) rt.path.shift();
+      else moveStep((wp.x-p.x)/d*WALK_SPEED, (wp.y-p.y)/d*WALK_SPEED);
+    }
+  } else if (rt.target){
+    // 直线兜底模式（极少数寻路失败时）
+    const t = rt.target;
+    const d = Math.hypot(t.x-p.x, t.y-p.y);
+    if (d<7){
+      resolveIntent();
+      rt.target = null; rt.stuck = 0;
+    } else {
+      const before = p.x+","+p.y;
+      moveStep((t.x-p.x)/d*WALK_SPEED, (t.y-p.y)/d*WALK_SPEED);
+      if (before === p.x+","+p.y){ if (++rt.stuck>20){ rt.target=null; rt.stuck=0; } }
+      else rt.stuck = 0;
+    }
+  }
+  // 木牌赶路：主动寻路到木牌时，或自由散步走到木牌旁时触发
+  if (Date.now() > rt.arriveGuard && (!rt.path || rt.intent === "exit")){
+    for (const e of EXITS[S.pos]){
+      if (Math.hypot(p.x-e.x, p.y-e.y) < 30){ doMove(e.to, e.cost); break; }
+    }
+  }
+  drawScene(performance.now()/1000);
+  renderPickHint();
+  requestAnimationFrame(gameTick);
+}
+
+// ================= 像素绘制 =================
+function drawScene(t){
+  const { ground, obs, deco } = buildDecor(S.pos);
+  octx.setTransform(1,0,0,1,0,0);
+  octx.clearRect(0,0,off.width,off.height);
+  octx.drawImage(ground,0,0);
+
+  deco.forEach(d => drawDeco(d, t));
+  rt.plants.forEach((p,i) => drawPlant(p, t, i));
+  EXITS[S.pos].forEach(e => drawExit(e, t));
+  obs.forEach(o => drawObstacle(o, t));
+  drawPlayer(rt.player, t);
+
+  // 云影（白天，柔和的光斑）
+  if (timeIdx()<3){
+    octx.fillStyle = "rgba(255,252,220,0.10)";
+    for (let i=0;i<4;i++){
+      const cx = ((t*10 + i*360) % (W+400)) - 200;
+      octx.beginPath();
+      octx.ellipse(cx/PS, (100+i*150)/PS, 60, 24, 0, 0, 7);
+      octx.fill();
+    }
+  }
+  // 飘落的花瓣 / 光尘（治愈氛围）
+  if (timeIdx()<3){
+    const petalCols = ["rgba(255,190,210,0.55)","rgba(255,235,180,0.5)","rgba(255,255,240,0.5)"];
+    for (let i=0;i<14;i++){
+      const px_ = ((i*173 + t*22) % (W+80)) - 40;
+      const py_ = ((i*97 + t*14 + Math.sin(t*0.7+i)*30) % (H+60)) - 20;
+      octx.fillStyle = petalCols[i%3];
+      octx.fillRect(px_/PS, py_/PS, 2, 2);
+      octx.fillRect(px_/PS+1, py_/PS+1, 1, 1);
+    }
+  }
+  // 沼泽雾气（更柔）
+  if (SCENES[S.pos].type==="swamp"){
+    for (let i=0;i<3;i++){
+      const y = 140+i*150 + Math.sin(t*0.5+i)*10;
+      octx.fillStyle = "rgba(225,240,230,0.10)";
+      octx.fillRect(0, y/PS, W/PS, 36/PS);
+    }
+  }
+  // 桃花谷：密集粉花瓣雨
+  if (SCENES[S.pos].type==="peach"){
+    const cols = ["rgba(255,168,196,0.7)","rgba(255,196,214,0.65)","rgba(255,232,240,0.6)"];
+    for (let i=0;i<26;i++){
+      const px_ = ((i*137 + t*26) % (W+80)) - 40;
+      const py_ = ((i*89 + t*18 + Math.sin(t*0.9+i*1.3)*26) % (H+60)) - 20;
+      octx.fillStyle = cols[i%3];
+      octx.fillRect(px_/PS, py_/PS, 2, 2);
+      if (i%2===0) octx.fillRect(px_/PS-1, py_/PS+1, 1, 1);
+    }
+  }
+  // 月竹林：飘落的竹叶
+  if (SCENES[S.pos].type==="bamboo"){
+    for (let i=0;i<18;i++){
+      const px_ = ((i*167 + t*20) % (W+80)) - 40;
+      const py_ = ((i*103 + t*24 + Math.sin(t*1.1+i)*20) % (H+60)) - 20;
+      octx.fillStyle = "rgba(178,216,140,0.65)";
+      octx.fillRect(px_/PS, py_/PS, 3, 1);
+    }
+  }
+  // 星光湖：白天水面碎光
+  if (SCENES[S.pos].type==="lake" && timeIdx()<3){
+    const rnd = mulberry32(5);
+    for (let i=0;i<24;i++){
+      const x = rnd()*W, y = 360+rnd()*240;
+      const a = 0.25+0.5*Math.abs(Math.sin(t*2.8+i*1.9));
+      octx.fillStyle = "rgba(240,250,255,"+a.toFixed(2)+")";
+      octx.fillRect(x/PS, y/PS, 2, 1);
+    }
+  }
+  // 夜晚萤火虫
+  if (timeIdx()===3 && (SCENES[S.pos].type==="forest"||SCENES[S.pos].type==="swamp"||SCENES[S.pos].type==="lake")){
+    const rnd = mulberry32(99);
+    for (let i=0;i<26;i++){
+      const x = 40+rnd()*(W-80), base = 60+rnd()*(H-120);
+      const y = base + Math.sin(t*1.4+i)*14;
+      const a = 0.5 + 0.5*Math.abs(Math.sin(t*2+i*1.7));
+      octx.fillStyle = "rgba(235,255,170,"+a.toFixed(2)+")";
+      octx.fillRect(x/PS, y/PS, 2, 2);
+      octx.fillStyle = "rgba(235,255,170,0.18)";
+      octx.fillRect(x/PS-1, y/PS-1, 4, 4);
+    }
+  }
+  // 时段滤镜
+  octx.fillStyle = TINT[timeIdx()];
+  octx.fillRect(0,0,off.width,off.height);
+  // 柔和暗角
+  octx.fillStyle = "rgba(90,70,40,0.10)";
+  octx.fillRect(0,0,off.width,2);
+  octx.fillRect(0,off.height-2,off.width,2);
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, W, H);
+
+  // ===== 高清层：点击波纹 / 植物名牌 / 对话气泡 =====
+  if (rt.clickFx){
+    const el = (performance.now() - rt.clickFx.t0) / 600;
+    if (el < 1){
+      ctx.strokeStyle = "rgba(255,215,120,"+(0.85-el*0.85).toFixed(2)+")";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(rt.clickFx.x, rt.clickFx.y, 6+el*20, 0, 7); ctx.stroke();
+    } else rt.clickFx = null;
+  }
+  drawNameTags();
+  drawDialog(t);
+}
+
+function drawNameTags(){
+  const p = rt.player;
+  ctx.textAlign = "center";
+  const now = performance.now()/1000;
+  for (const pl of rt.plants){
+    const plant = plantById(pl.id);
+    const far = Math.hypot(p.x-pl.x, p.y-pl.y) >= 140;
+    const label = plant.icon + " " + plant.name;
+    ctx.font = "13px 'Microsoft YaHei', sans-serif";
+    const w = ctx.measureText(label).width + 14;
+    const x = Math.max(8, Math.min(W-w-8, pl.x - w/2));
+    const y = pl.y - 46;
+    ctx.globalAlpha = far ? 0.78 : 1;
+    // 名牌全场常显
+    ctx.fillStyle = "rgba(255,253,242,0.94)";
+    roundRect(x, y, w, 22, 8); ctx.fill();
+    ctx.strokeStyle = plant.rarity==="rare" ? "#e0a3c8" : "#b5d3a0";
+    ctx.lineWidth = 1.5; roundRect(x, y, w, 22, 8); ctx.stroke();
+    ctx.fillStyle = "#5a6b52";
+    ctx.fillText(label, x+w/2, y+15);
+    // 名牌上方跳动的小箭头
+    const ay = y - 8 + Math.sin(now*3 + pl.x)*3;
+    ctx.fillStyle = plant.rarity==="rare" ? "#e88ab8" : "#e2a53d";
+    ctx.beginPath();
+    ctx.moveTo(pl.x-7, ay-7); ctx.lineTo(pl.x+7, ay-7); ctx.lineTo(pl.x, ay);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = "start";
+}
+
+function drawDialog(t){
+  if (!rt.dialog || Date.now() > rt.dialog.until) return;
+  const npc = NPCS[S.pos];
+  if (!npc || npc.id !== rt.dialog.npcId) return;
+  const line = npc.lines[timeIdx()];
+  ctx.font = "14px 'Microsoft YaHei', sans-serif";
+  const tw = ctx.measureText(line).width;
+  const bw = tw + 34, bh = 44;
+  const bx = Math.max(10, Math.min(W-bw-10, npc.x - bw/2));
+  const by = Math.max(8, npc.y - 88);
+  const bob = Math.sin(t*2)*2;
+  ctx.fillStyle = "rgba(255,253,242,0.96)";
+  roundRect(bx, by+bob, bw, bh, 12); ctx.fill();
+  ctx.strokeStyle = "#dbab63"; ctx.lineWidth = 2;
+  roundRect(bx, by+bob, bw, bh, 12); ctx.stroke();
+  // 小尾巴
+  ctx.beginPath();
+  ctx.moveTo(npc.x-8, by+bob+bh); ctx.lineTo(npc.x+8, by+bob+bh); ctx.lineTo(npc.x, by+bob+bh+12);
+  ctx.closePath(); ctx.fillStyle = "rgba(255,253,242,0.96)"; ctx.fill();
+  ctx.fillStyle = "#5a5245";
+  ctx.fillText(npc.name + "：" + line, bx+17, by+bob+28);
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawObstacle(o, t){
+  const c = octx;
+  const px = (x,y,w,h,col) => { c.fillStyle=col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  if (o.kind==="tree"){
+    px(o.x-o.s*0.55, o.y+o.s*0.35, o.s*1.1, 6, "rgba(60,90,40,0.25)");        // 影
+    px(o.x-4, o.y-o.s*0.4, 8, o.s*0.8, "#7d5a3a");                            // 干
+    px(o.x-4, o.y-o.s*0.4, 3, o.s*0.8, "#664a2e");
+    const leaf = o.hu<0.5 ? ["#4e9a50","#64b465","#83cc85"] : ["#4a9152","#5fab5f","#7cc47e"];
+    px(o.x-o.s*0.62, o.y-o.s*0.72, o.s*1.24, o.s*0.62, leaf[0]);              // 冠底
+    px(o.x-o.s*0.5, o.y-o.s*1.0, o.s*1.0, o.s*0.5, leaf[1]);                  // 冠中
+    px(o.x-o.s*0.34, o.y-o.s*1.22, o.s*0.68, o.s*0.36, leaf[2]);              // 冠顶
+    px(o.x-o.s*0.36, o.y-o.s*1.16, o.s*0.2, o.s*0.14, "#a5e0a0");             // 高光
+  } else if (o.kind==="deadtree"){
+    px(o.x-4, o.y-o.s*0.5, 8, o.s*0.9, "#8a7a6a");
+    px(o.x-o.s*0.5, o.y-o.s*0.72, o.s*0.5, 5, "#8a7a6a");
+    px(o.x+2, o.y-o.s*0.9, o.s*0.42, 5, "#7a6a5a");
+    px(o.x-2, o.y-o.s*0.4, 3, o.s*0.9, "#7a6a5a");
+  } else if (o.kind==="rock"){
+    px(o.x-o.s*0.8, o.y+o.s*0.35, o.s*1.6, 6, "rgba(60,90,40,0.25)");
+    px(o.x-o.s*0.85, o.y-o.s*0.35, o.s*1.7, o.s*0.75, "#a8b2a0");
+    px(o.x-o.s*0.7, o.y-o.s*0.25, o.s*0.9, o.s*0.3, "#c2ccbc");
+    px(o.x+o.s*0.1, o.y-o.s*0.05, o.s*0.5, o.s*0.3, "#8a948a");
+  } else if (o.kind==="crate"){
+    px(o.x-11,o.y+9,26,6,"rgba(60,90,40,0.25)");
+    px(o.x-11,o.y-11,22,22,"#c9a26a");
+    px(o.x-11,o.y-11,22,4,"#a8844e");
+    px(o.x-2,o.y-11,4,22,"#a8844e");
+  } else if (o.kind==="peachtree"){
+    px(o.x-o.s*0.55, o.y+o.s*0.35, o.s*1.1, 6, "rgba(60,90,40,0.22)");
+    px(o.x-4, o.y-o.s*0.4, 8, o.s*0.8, "#8a5a42");
+    px(o.x-4, o.y-o.s*0.4, 3, o.s*0.8, "#6d4534");
+    px(o.x-o.s*0.62, o.y-o.s*0.72, o.s*1.24, o.s*0.62, "#f2a0b8");   // 冠底
+    px(o.x-o.s*0.5,  o.y-o.s*1.0,  o.s*1.0,  o.s*0.5,  "#f7b8ca");   // 冠中
+    px(o.x-o.s*0.34, o.y-o.s*1.22, o.s*0.68, o.s*0.36, "#fbd2dc");   // 冠顶
+    px(o.x-o.s*0.36, o.y-o.s*1.16, o.s*0.2,  o.s*0.14, "#ffecf2");   // 高光
+    px(o.x+o.s*0.2,  o.y-o.s*0.6,  3, 3, "#e88aa8");                 // 花簇
+    px(o.x-o.s*0.5,  o.y-o.s*0.9,  3, 3, "#e88aa8");
+  } else if (o.kind==="bamboo"){
+    px(o.x-10, o.y+6, 24, 5, "rgba(60,90,40,0.2)");
+    // 2~3 根竹竿
+    const n = 2 + Math.floor(o.s/28);
+    for (let k=0;k<n;k++){
+      const bx = o.x-8+k*9 + (o.hu*6-3);
+      const sway = Math.sin(t*1.5+o.x+k)*1.2;
+      px(bx, o.y-o.s*0.9, 5, o.s*0.95, "#9fce74");
+      px(bx, o.y-o.s*0.9, 2, o.s*0.95, "#c5e8a0");
+      for (let j=1;j<4;j++){
+        const ny = o.y-o.s*0.9+j*(o.s*0.24);
+        px(bx-1, ny, 7, 2, "#7aa85a");                            // 竹节
+        if (j<4){ px(bx-8, ny-1+sway, 9, 2, "#a8d888"); px(bx+5, ny-2+sway, 8, 2, "#b8e09a"); } // 竹叶
+      }
+    }
+  } else if (o.kind==="waterblock"){
+    // 湖面阻挡块本身不绘制（湖面已在地面/装饰层画好）
+  } else if (o.kind==="pool"){
+    const wob = Math.sin(t*2+o.x)*1.5;
+    px(o.x-o.r*1.5, o.y-o.r*0.6, o.r*3, o.r*1.2, "#6f9a8e");
+    px(o.x-o.r*1.2, o.y-o.r*0.4+wob, o.r*2.4, o.r*0.8, "#628a80");
+    px(o.x-o.r*0.8, o.y-o.r*0.2+wob, o.r*1.2, 3, "rgba(190,235,220,0.5)");
+  } else if (o.kind==="npc"){
+    drawNPC(o, t);
+  }
+}
+
+// ---- NPC 像素小人 ----
+function drawNPC(o, t){
+  const c = octx;
+  const px = (x,y,w,h,col) => { c.fillStyle=col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  const x = o.x, y = o.y;
+  const breathe = Math.sin(t*1.6)*1; // 轻轻呼吸起伏
+  px(x-12, y+10, 26, 7, "rgba(60,90,40,0.25)");
+  if (o.look==="grandpa"){
+    px(x-8, y-8+breathe, 16, 14, "#8a6a48");          // 褐色外套
+    px(x-8, y-8+breathe, 16, 4, "#9d7a54");
+    px(x-5, y-4+breathe, 10, 8, "#e8e2d0");           // 白胡子
+    px(x-6, y-18+breathe, 12, 10, "#f0cfa8");         // 脸
+    px(x-7, y-22+breathe, 14, 5, "#d8d2c0");          // 白发
+    px(x-6, y-14+breathe, 2, 2, "#555"); px(x+4, y-14+breathe, 2, 2, "#555"); // 眼
+    px(x+10, y-6+breathe, 3, 18, "#6d4a2f");          // 拐杖
+    px(x+9, y-8+breathe, 5, 3, "#c9a26a");
+  } else if (o.look==="granny"){
+    px(x-8, y-8+breathe, 16, 14, "#a08aa8");          // 紫灰披肩
+    px(x-8, y-8+breathe, 16, 4, "#b49cc0");
+    px(x-6, y-18+breathe, 12, 10, "#eec9a2");         // 脸
+    px(x-5, y-22+breathe, 10, 5, "#c8c4bc");          // 发髻
+    px(x+2, y-24+breathe, 5, 5, "#c8c4bc");
+    px(x-6, y-14+breathe, 2, 2, "#555"); px(x+4, y-14+breathe, 2, 2, "#555");
+    px(x+9, y-2+breathe, 8, 8, "#c9a26a");            // 药篮
+    px(x+10, y-5+breathe, 6, 3, "#8fbe82");           // 篮里的草药
+  } else if (o.look==="girl"){
+    px(x-8, y-6+breathe, 16, 14, "#f2b8cc");          // 粉裙
+    px(x-8, y+6+breathe, 16, 5, "#e8a0ba");
+    px(x-6, y-18+breathe, 12, 10, "#f2d4ac");         // 脸
+    px(x-8, y-22+breathe, 16, 5, "#f2d07a");          // 草帽
+    px(x-5, y-26+breathe, 10, 5, "#f2d07a");
+    px(x-6, y-14+breathe, 2, 2, "#555"); px(x+4, y-14+breathe, 2, 2, "#555");
+    px(x+10, y+2, 8, 8, "#f5f0e0");                   // 小羊
+    px(x+10, y-2, 8, 5, "#faf6ea");
+    px(x+16, y-3, 3, 3, "#e8e2d0");
+  } else if (o.look==="ranger"){
+    px(x-8, y-8+breathe, 16, 14, "#4a7a50");          // 深绿制服
+    px(x-8, y-8+breathe, 16, 4, "#5a8a5e");
+    px(x-2, y-5+breathe, 4, 8, "#e8d9a0");
+    px(x-6, y-18+breathe, 12, 10, "#e8bd92");         // 脸
+    px(x-7, y-21+breathe, 14, 4, "#3a5a3e");          // 帽
+    px(x-9, y-18+breathe, 18, 3, "#3a5a3e");
+    px(x-5, y-13+breathe, 10, 3, "#6a5a4a");          // 胡茬
+    px(x-6, y-14+breathe, 2, 2, "#555"); px(x+4, y-14+breathe, 2, 2, "#555");
+  } else if (o.look==="fox"){
+    const tail = Math.sin(t*2.2)*2;
+    px(x-14, y+6, 26, 5, "rgba(60,90,40,0.2)");
+    px(x-9, y-6+breathe, 18, 11, "#e8954a");          // 身体
+    px(x-6, y-2+breathe, 10, 7, "#f5e8d8");           // 白肚子
+    px(x+7, y-14+breathe, 9, 9, "#e8954a");           // 头
+    px(x+8, y-8+breathe, 7, 4, "#f5e8d8");            // 白脸颊
+    px(x+5, y-17+breathe, 3, 5, "#c87838");           // 耳朵
+    px(x+11, y-17+breathe, 3, 5, "#c87838");
+    px(x+9, y-11+breathe, 2, 2, "#333");              // 眼
+    px(x-16, y-4+tail+breathe, 9, 6, "#e8954a");      // 大尾巴
+    px(x-18, y-4+tail+breathe, 4, 6, "#f5f0e0");      // 尾巴白尖
+    px(x-7, y+4, 3, 6, "#c87838"); px(x+1, y+4, 3, 6, "#c87838"); // 腿
+  } else if (o.look==="poet"){
+    px(x-8, y-8+breathe, 16, 14, "#b8d8e8");          // 淡蓝长衫
+    px(x-8, y-8+breathe, 16, 4, "#cde8f2");
+    px(x-6, y-18+breathe, 12, 10, "#f2d8b0");         // 脸
+    px(x-8, y-22+breathe, 16, 5, "#6a5a48");          // 发髻发色
+    px(x+2, y-26+breathe, 6, 6, "#6a5a48");
+    px(x-6, y-14+breathe, 2, 2, "#555"); px(x+4, y-14+breathe, 2, 2, "#555");
+    px(x+10, y-2+breathe, 9, 12, "#f6f0dc");          // 手里的小书
+    px(x+11, y+breathe, 7, 2, "#c8b888");
+    px(x-14, y-10+breathe, 2, 2, "#f7b3bd");          // 肩上落的花瓣
+    px(x-11, y-13+breathe, 2, 2, "#f7b3bd");
+  } else if (o.look==="flutist"){
+    px(x-8, y-8+breathe, 16, 14, "#7aa86a");          // 竹青短衫
+    px(x-8, y-8+breathe, 16, 4, "#8fbc7c");
+    px(x-6, y-18+breathe, 12, 10, "#eec9a2");         // 脸
+    px(x-7, y-22+breathe, 14, 5, "#3d3428");          // 黑发
+    px(x+2, y-26+breathe, 6, 6, "#3d3428");           // 发髻
+    px(x-6, y-14+breathe, 2, 2, "#555"); px(x+4, y-14+breathe, 2, 2, "#555");
+    const flute = Math.sin(t*2)*0.8;
+    px(x-10, y-8+breathe+flute, 22, 3, "#c9a26a");    // 竹笛
+    px(x-6, y-9+breathe+flute, 2, 2, "#8a6a3a");
+    px(x+2, y-9+breathe+flute, 2, 2, "#8a6a3a");
+  } else if (o.look==="kitten"){
+    const tail = Math.sin(t*2.6)*2;
+    px(x-12, y+6, 22, 5, "rgba(60,90,40,0.2)");
+    px(x-8, y-5+breathe, 16, 10, "#f2ede4");          // 白猫身体
+    px(x+6, y-11+breathe, 9, 8, "#f2ede4");           // 头
+    px(x+5, y-14+breathe, 3, 4, "#f2ede4");           // 耳朵
+    px(x+10, y-14+breathe, 3, 4, "#f2ede4");
+    px(x+5, y-13+breathe, 2, 2, "#e8a0b0");           // 耳朵内侧
+    px(x+6, y-9+breathe, 2, 2, "#4a6a8a"); px(x+10, y-9+breathe, 2, 2, "#4a6a8a"); // 眼
+    px(x+8, y-7+breathe, 2, 1, "#e8a0b0");            // 小鼻子
+    px(x-14, y-3+tail+breathe, 8, 3, "#f2ede4");      // 尾巴
+    px(x-4, y+4, 3, 5, "#e0d8c8"); px(x+3, y+4, 3, 5, "#e0d8c8");  // 腿
+    px(x-16, y-14+breathe, 2, 2, "#cde4f2"); px(x+18, y-4+breathe, 2, 2, "#cde4f2"); // 星星碎光
+  }
+}
+
+function drawDeco(d, t){
+  const c = octx;
+  const px = (x,y,w,h,col) => { c.fillStyle=col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  if (d.kind==="bush"){
+    px(d.x-d.s, d.y-d.s*0.7, d.s*2, d.s*1.2, "#5a9a52");
+    px(d.x-d.s*0.7, d.y-d.s, d.s*1.4, d.s*0.6, "#6fb462");
+    px(d.x-d.s*0.4, d.y-d.s*0.9, d.s*0.5, d.s*0.3, "#8fca78");
+  } else if (d.kind==="reed"){
+    for (let i=0;i<4;i++){
+      const sway = Math.sin(t*1.4 + d.x + i)*2.4;
+      px(d.x+i*4, d.y-14, 2, 16, "#5f9a52");
+      px(d.x+i*4+sway, d.y-19, 2, 7, "#7fb563");
+    }
+  } else if (d.kind==="flowerpatch"){
+    const cols = d.c<0.4 ? ["#f4b27a","#f6ca62"] : (d.c<0.75 ? ["#f292a2","#f7b3bd"] : ["#f9f1a5","#fff9cf"]);
+    for (let i=0;i<5;i++){
+      const fx = d.x + (i%3)*d.s*0.5, fy = d.y + Math.floor(i/3)*d.s*0.5;
+      px(fx, fy-4, 2, 4, "#5f9a52");
+      px(fx-2, fy-8, 6, 5, cols[i%2]);
+    }
+  } else if (d.kind==="fernpatch"){
+    for (let i=0;i<4;i++){
+      const a = -0.9 + i*0.5;
+      px(d.x + Math.cos(a)*d.s, d.y + Math.sin(a)*d.s*0.8 - d.s*0.4, 3, d.s*0.8, "#54945a");
+    }
+    px(d.x-1, d.y-d.s*0.2, 2, d.s*0.9, "#447a4a");
+  } else if (d.kind==="mudpatch"){
+    px(d.x, d.y, d.s, d.s*0.5, "#7a644a");
+    px(d.x+4, d.y+4, d.s*0.6, d.s*0.3, "#8a7458");
+  } else if (d.kind==="path"){
+    px(d.x-20, d.y, 40, 30, "#dcc992");
+  } else if (d.kind==="fence"){
+    for (let i=0;i<d.n;i++) px(d.x+i*22, d.y-14, 5, 26, "#9d7a4e");
+    px(d.x, d.y-8, d.n*22, 4, "#b8925e");
+    px(d.x, d.y+4, d.n*22, 4, "#b8925e");
+  } else if (d.kind==="tent"){
+    px(d.x-42,d.y+24,84,10,"rgba(60,90,40,0.25)");
+    px(d.x-38,d.y-30,76,56,"#e88a62");
+    px(d.x-38,d.y-30,20,56,"#d47448");
+    px(d.x-16,d.y-2,32,28,"#7a3a22");
+    px(d.x-42,d.y-34,84,8,"#f2a076");
+    px(d.x+30,d.y-44,3,20,"#7d5a3a"); px(d.x+22,d.y-44,3,20,"#7d5a3a");
+    px(d.x+30,d.y-52,14,8,"#f6d06e"); // 小旗
+  } else if (d.kind==="fire"){
+    const fl = 1+Math.sin(t*8)*0.3;
+    px(d.x-13,d.y+4,26,4,"#7d5a3a"); px(d.x-9,d.y-2,20,4,"#9d7044");
+    px(d.x-6, d.y-10*fl, 12, 10*fl, "#f6a34e");
+    px(d.x-3, d.y-15*fl, 6, 8*fl, "#ffd96e");
+    px(d.x-1, d.y-18*fl, 3, 4, "#fff6c2");
+    c.fillStyle = "rgba(255,190,90,0.18)";
+    c.beginPath(); c.arc(d.x/PS,(d.y-8)/PS, 42*fl/PS, 0, 7); c.fill();
+  } else if (d.kind==="log"){
+    px(d.x-36,d.y-8,72,16,"#7d5a3a");
+    px(d.x-36,d.y-8,72,5,"#9d7044");
+    px(d.x-38,d.y-8,6,16,"#66462a");
+  } else if (d.kind==="stream"){
+    // 动态水面（柔和）
+    px(0,456,W,72,"#8fc8e2");
+    for (let i=0;i<7;i++){
+      const y = 462+i*9;
+      const offX = (t*20+i*67) % 95;
+      for (let x=-95+offX; x<W; x+=95) px(x, y, 32, 3, "rgba(200,235,248,0.55)");
+    }
+    px(0,456,W,4,"#c2e6f4");
+    px(0,524,W,4,"#6fa8c8");
+  } else if (d.kind==="lakewater"){
+    // 湖面波光（白天）
+    if (timeIdx()<3){
+      for (let i=0;i<9;i++){
+        const y = 356+i*30;
+        const offX = (t*16+i*53) % 120;
+        for (let x=-120+offX; x<W; x+=120) px(x, y, 42, 3, "rgba(215,242,250,0.45)");
+      }
+    }
+    // 夜晚：星光倒影
+    if (timeIdx()===3){
+      const rnd = mulberry32(7);
+      for (let i=0;i<40;i++){
+        const x = rnd()*W, base = 356+rnd()*250;
+        const y = base + Math.sin(t*1.2+i)*2;
+        const a = 0.35+0.5*Math.abs(Math.sin(t*2.4+i*2.1));
+        px(x, y, 3, 2, "rgba(235,244,255,"+a.toFixed(2)+")");
+      }
+      // 月亮倒影
+      const mb = Math.sin(t*0.8)*2;
+      px(500, 400+mb, 44, 16, "rgba(255,246,210,0.35)");
+      px(506, 403+mb, 32, 10, "rgba(255,250,225,0.5)");
+    }
+  }
+}
+
+function drawPlant(p, t, i){
+  const plant = plantById(p.id);
+  const c = octx;
+  const px = (x,y,w,h,col) => { c.fillStyle=col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  const bob = Math.sin(t*2.4+i*1.3)*2.6;
+  const y = p.y + bob;
+  const rare = plant.rarity==="rare";
+  // 地面目标圈（拾取点标记，任何植被里都一眼可辨）
+  const gr = 17 + 2.5*Math.sin(t*2.6+i);
+  c.fillStyle = rare ? "rgba(255,170,215,0.18)" : "rgba(255,238,150,0.18)";
+  c.beginPath(); c.ellipse(p.x/PS, (p.y+6)/PS, gr*1.5, gr*0.62, 0, 0, 7); c.fill();
+  c.strokeStyle = rare ? "rgba(240,130,190,0.9)" : "rgba(248,200,70,0.9)";
+  c.lineWidth = 2;
+  c.beginPath(); c.ellipse(p.x/PS, (p.y+6)/PS, gr*1.5, gr*0.62, 0, 0, 7); c.stroke();
+  // 醒目光晕（更大更亮）
+  const glowCol = rare ? "rgba(255,170,215,0.45)" : "rgba(255,244,160,0.4)";
+  c.fillStyle = glowCol;
+  c.beginPath(); c.arc(p.x/PS, y/PS, 15, 0, 7); c.fill();
+  c.fillStyle = rare ? "rgba(255,190,225,0.2)" : "rgba(255,248,190,0.18)";
+  c.beginPath(); c.arc(p.x/PS, y/PS, 22, 0, 7); c.fill();
+  // 脉动光环
+  const rr = 13 + 3*Math.sin(t*3+i);
+  c.strokeStyle = rare ? "rgba(255,170,215,0.6)" : "rgba(255,244,170,0.55)";
+  c.lineWidth = 1.5;
+  c.beginPath(); c.arc(p.x/PS, (y-4)/PS, rr, 0, 7); c.stroke();
+  // 竖直柔光柱
+  c.fillStyle = rare ? "rgba(255,190,225,0.14)" : "rgba(255,248,200,0.12)";
+  c.fillRect((p.x-8)/PS, (y-56)/PS, 16/PS, 50/PS);
+  // 环绕小星星
+  for (let k=0;k<3;k++){
+    const a = t*2.2 + k*2.1;
+    const sx = p.x + Math.cos(a)*16, sy = y - 16 + Math.sin(a)*5;
+    px(sx, sy, 2, 2, "#fffbe0");
+  }
+  c.save();
+  c.translate(p.x/PS, y/PS);
+  c.scale(1.35, 1.35);
+  c.translate(-p.x/PS, -y/PS);
+  const col = plant.col;
+  switch (plant.spr){
+    case "flower":
+      px(p.x-1, y, 3, 9, "#54945a");
+      px(p.x-6, y-8, 5, 5, col); px(p.x+2, y-8, 5, 5, col);
+      px(p.x-3, y-11, 7, 5, col); px(p.x-3, y-4, 7, 4, col);
+      px(p.x-1, y-8, 3, 3, "#fff0a0");
+      px(p.x+2, y+1, 4, 2, "#6fb462");
+      break;
+    case "wheat":
+      px(p.x-1, y-4, 2, 13, "#c99a4e");
+      for (let k=0;k<4;k++){ px(p.x-5+k*3, y-14+k*2.6, 4, 3, col); }
+      px(p.x-2, y-16, 4, 4, col);
+      break;
+    case "fern":
+      px(p.x-1, y-2, 2, 11, "#447a4a");
+      for (let k=0;k<4;k++){
+        const a = -1.9+k*0.5;
+        px(p.x+Math.cos(a)*9-1, y-4+Math.sin(a)*8, 3, 3, col);
+        px(p.x+Math.cos(a)*5-1, y-6+Math.sin(a)*5, 2, 2, "#a5e09a");
+      }
+      break;
+    case "moss":
+      px(p.x-8, y+2, 16, 5, col);
+      px(p.x-5, y-2, 10, 5, col);
+      px(p.x-3, y-5, 6, 4, "#f0f8d8");
+      px(p.x-6, y+1, 3, 2, "#f0f8d8");
+      break;
+    case "sprout":
+      px(p.x-1, y-2, 2, 11, "#5a9a50");
+      px(p.x-8, y-8, 7, 4, col); px(p.x-7, y-11, 4, 3, col);
+      px(p.x+2, y-10, 7, 4, col); px(p.x+4, y-13, 4, 3, col);
+      break;
+    case "bell":
+      px(p.x-1, y-4, 2, 13, "#4a7a55");
+      px(p.x-4, y-12, 9, 7, col);
+      px(p.x-2, y-5, 5, 3, col);
+      px(p.x-3, y-11, 3, 2, "#a8b8d8");
+      px(p.x-1, y-15, 3, 3, "#a8b8d8");
+      break;
+    case "mushroom":
+      px(p.x-2, y-2, 5, 9, "#f2e8d0");
+      px(p.x-8, y-9, 17, 8, col);
+      px(p.x-6, y-12, 13, 4, col);
+      px(p.x-5, y-11, 3, 2, "#fff6cc");
+      px(p.x+2, y-7, 3, 2, "#f2a25a");
+      c.fillStyle = "rgba(255,225,140,0.4)";
+      c.beginPath(); c.arc(p.x/PS, (y-7)/PS, 16, 0, 7); c.fill();
+      break;
+    case "pad":
+      px(p.x-10, y-3, 20, 7, "rgba(70,120,105,0.7)");
+      px(p.x-9, y-4, 18, 6, col);
+      px(p.x-4, y-5, 7, 3, "#c2ecce");
+      px(p.x-2, y-7, 3, 2, "#effff5");
+      break;
+  }
+  c.restore();
+}
+
+function drawExit(e, t){
+  const c = octx;
+  const px = (x,y,w,h,col) => { c.fillStyle=col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  px(e.x-18, e.y+12, 36, 6, "rgba(60,90,40,0.25)");
+  px(e.x-3, e.y-12, 6, 26, "#7d5a3a");
+  px(e.x-24, e.y-26, 48, 16, "#d9b465");
+  px(e.x-24, e.y-26, 48, 4, "#eccf7e");
+  px(e.x-24, e.y-14, 48, 4, "#b08f42");
+  for (let i=0;i<e.cost;i++) px(e.x-9+i*8, e.y-22, 5, 5, "#fff0a0");
+  c.fillStyle = "rgba(255,244,170,"+(0.3+0.25*Math.sin(t*3)).toFixed(2)+")";
+  c.beginPath(); c.arc(e.x/PS, (e.y+8)/PS, 5, 0, 7); c.fill();
+}
+
+function drawPlayer(p, t){
+  const c = octx;
+  const px = (x,y,w,h,col) => { c.fillStyle=col; c.fillRect(Math.round(x/PS),Math.round(y/PS),Math.ceil(w/PS),Math.ceil(h/PS)); };
+  const step = Math.round(Math.sin(p.walkT)*2);
+  px(p.x-11, p.y+10, 24, 7, "rgba(60,90,40,0.28)");
+  // 腿
+  px(p.x-6+step, p.y+2, 4, 9, "#5a4330");
+  px(p.x+2-step, p.y+2, 4, 9, "#5a4330");
+  // 身体（暖绿马甲）
+  px(p.x-8, p.y-9, 16, 13, "#5f9e56");
+  px(p.x-8, p.y-9, 16, 4, "#74b468");
+  px(p.x-2, p.y-6, 4, 8, "#f2e4b8"); // 前袋
+  // 头
+  px(p.x-6, p.y-19, 12, 11, "#f4d0a4");
+  px(p.x+p.face*2-1, p.y-15, 2, 3, "#4a4038"); // 眼
+  // 头发+帽
+  px(p.x-7, p.y-23, 14, 5, "#7d5a3a");
+  px(p.x-9, p.y-20, 18, 3, "#e89062");   // 帽檐
+  px(p.x-5, p.y-26, 10, 4, "#e89062");   // 帽顶
+  px(p.x-5, p.y-26, 10, 1, "#f6b088");   // 帽顶高光
+  // 背上的标本夹
+  px(p.x-p.face*10-2, p.y-8, 5, 9, "#a8844e");
+}
+
+// ================= UI =================
+function renderExitLabels(){
+  const box = document.getElementById("exitLabels");
+  box.innerHTML = EXITS[S.pos].map(e => {
+    const lock = unlockText(e.to);
+    return "<span class='exitlabel' style='left:"+(e.x/W*100)+"%;top:"+(e.y/H*100)+"%;"
+      + (lock ? "filter:grayscale(0.7);opacity:0.85" : "")
+      + "'>" + (lock ? lock + " · " : "🚏 ") + e.label + (lock ? "" : " · " + e.cost + "体力") + "</span>";
+  }).join("");
+}
+
+function seekNearestPlant(){
+  if (!rt.plants.length){ log("🌿 这片区域能采的都采完啦，去下一区逛逛吧。"); return; }
+  if (S.energy<=0){ log("🚫 体力用完了，先收工返营吧。"); return; }
+  const p = rt.plants.reduce((a,b) =>
+    Math.hypot(rt.player.x-a.x, rt.player.y-a.y) < Math.hypot(rt.player.x-b.x, rt.player.y-b.y) ? a : b);
+  setPathDest(p.x, p.y, "pick");
+}
+
+function renderPickHint(){
+  const p = nearestPlant();
+  const hint = document.getElementById("ctrlHint");
+  const npc = nearestNPC();
+  // 植物计数HUD
+  const hud = document.getElementById("plantCount");
+  const n = rt.plants.length;
+  const cnt = n ? "🌿 本区域还有 " + n + " 株植物" : "🌿 本区域已采完 🎉";
+  if (hud.textContent !== cnt) hud.textContent = cnt;
+  if (p){
+    hint.innerHTML = "✋ 附近有 <b style='color:#d98a3d'>" + plantById(p.id).name + "</b>（" + (plantById(p.id).rarity==="rare"?"稀有":"常见") + "）—— 点击它即可采集（1 体力）";
+  } else if (npc){
+    hint.innerHTML = "💬 " + npc.name + " 就在旁边 —— 点击 TA 聊聊天吧";
+  } else {
+    hint.textContent = "🖱️ 点击场景走过去 · 点植物采集 · 点木牌赶路 · 点朋友聊天（方向键仍可用）";
+  }
+}
+
+function renderUI(){
+  const t = timeIdx();
+  document.getElementById("stDay").textContent = S.day;
+  document.getElementById("stPeriodIcon").textContent = PERIOD_ICONS[t];
+  document.getElementById("stPeriod").textContent = PERIODS[t];
+  document.getElementById("stEnergy").textContent = "●".repeat(S.energy) + "○".repeat(MAXE-S.energy);
+  document.getElementById("stEnergyNum").textContent = S.energy + "/" + MAXE;
+  document.getElementById("stPos").textContent = SCENES[S.pos].name + " " + SCENES[S.pos].emoji;
+  document.getElementById("stBag").textContent = S.bag.length + "/" + BAGMAX;
+  document.getElementById("stBagItems").innerHTML =
+    S.bag.map(id=>"<span>"+plantById(id).icon+"</span>").join("") +
+    Array(BAGMAX-S.bag.length).fill("<span style='opacity:.35'>▫</span>").join("");
+  document.getElementById("travelBtns").innerHTML = EXITS[S.pos].map(e => {
+    const lock = unlockText(e.to);
+    if (lock) return "<button class='act ghost' onclick='doMove(\""+e.to+"\",0)'>🔒 " + SCENES[e.to].name + " · " + lock.replace("🔒 ","") + "</button>";
+    return "<button class='act " + (e.cost>S.energy?"ghost":"") + "' onclick='doMove(\""+e.to+"\","+e.cost+")'" + (e.cost>S.energy?" disabled":"") + ">🚏 " + SCENES[e.to].name + "（" + e.cost + "体力）</button>";
+  }).join("");
+  const nw = document.getElementById("nightWarn");
+  if (t>=2 && S.pos!=="camp" && S.bag.length>0)
+    nw.textContent = "⚠️ " + PERIODS[t] + "且不在营地：若体力耗尽，标本夹里一半标本会受潮损毁！";
+  else if (t===3 && S.pos!=="camp")
+    nw.textContent = "🌙 夜晚适合寻找发光植物，空夹夜采更安全。累了就早点回营地休息吧。";
+  else nw.textContent = "";
+  renderDex(); renderLog();
+}
+
+function renderDex(){
+  const n = PLANTS.filter(p=>dexOf(p.id)===2).length;
+  document.getElementById("dexCount").textContent = n + "/" + PLANTS.length;
+  document.getElementById("dexBar").style.width = (n/PLANTS.length*100)+"%";
+  document.getElementById("dexGrid").innerHTML = PLANTS.map(p=>{
+    const st = dexOf(p.id);
+    if (st===0) return "<div class='dex-card st0'><div class='ic'>🌿</div><div><div class='nm'>？？？</div><div class='info'>尚未发现</div></div></div>";
+    const cond = (p.period===-1?"全天":PERIODS[p.period]) + " · " + SCENES[p.region].name;
+    if (st===1) return "<div class='dex-card st1'><div class='ic'>"+p.icon+"</div><div><div class='nm'>"+p.name+"</div><div class='info'>剪影 · "+cond+"<br>已发现，待采集</div></div></div>";
+    return "<div class='dex-card st2'><div class='ic'>"+p.icon+"</div><div><div class='nm'>"+p.name+"</div><div class='info'>"+cond+" · "+(p.rarity==="rare"?"稀有":"常见")+"<br>"+p.desc+"</div></div></div>";
+  }).join("");
+}
+
+function renderLog(){
+  document.getElementById("log").innerHTML = logArr.map(m=>"<div class='entry'>"+m+"</div>").join("") || "<div class='hint'>还没有记录。</div>";
+}
+
+// ================= 弹窗 =================
+function openOverlay(id){ document.getElementById(id).classList.add("show"); }
+function closeOverlay(id){ document.getElementById(id).classList.remove("show"); }
+function openRules(){ openOverlay("rulesOverlay"); }
+function openBagModal(found){
+  document.getElementById("bagFoundText").innerHTML =
+    "发现了 <b style='color:#d98a3d'>"+found.name+"</b>（"+(found.rarity==="rare"?"稀有":"常见")+"）。替换背包里的哪一份？";
+  document.getElementById("bagList").innerHTML = S.bag.map((id,i)=>
+    "<button class='act ghost' onclick='replaceBag("+i+")'>"+plantById(id).name+"</button>"
+  ).join("");
+  openOverlay("bagOverlay");
+}
+
+// ================= 启动 =================
+log("🚌 抵达营地。走出木牌即可前往溪谷（1体力）或向阳坡（2体力）。营地里有位爷爷，去打个招呼吧。");
+if (S.day>1) log("💾 已载入存档：第 " + S.day + " 天，图鉴 " + PLANTS.filter(p=>dexOf(p.id)===2).length + "/" + PLANTS.length + "。");
+enterScene("");
+renderUI();
+requestAnimationFrame(gameTick);
+</script>
+</body>
+</html>

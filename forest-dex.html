@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>森林考察 · 植物图鉴</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: linear-gradient(160deg, #0b1f14 0%, #12301f 55%, #1a3a26 100%);
+    color: #e8f2e8; min-height: 100vh; padding: 18px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 22px; letter-spacing: 2px; color: #bfe6b6; margin-bottom: 4px; }
+  .subtitle { color: #7fae87; font-size: 13px; margin-bottom: 14px; }
+  header.bar {
+    display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center;
+    background: rgba(0,0,0,.28); border: 1px solid #2c5238; border-radius: 12px;
+    padding: 10px 16px; margin-bottom: 14px; font-size: 14px;
+  }
+  .stat b { color: #ffd97a; }
+  .energy-dots { letter-spacing: 2px; color: #8fd18f; font-size: 12px; }
+  .bag-chips span { display:inline-block; background:#24523a; border-radius:6px; padding:1px 6px; margin-right:4px; font-size:13px; }
+  .layout { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; }
+  @media (max-width: 860px){ .layout { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(0,0,0,.28); border: 1px solid #2c5238; border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 14px;
+  }
+  .panel h2 { font-size: 15px; color: #a8d8a0; margin-bottom: 10px; letter-spacing: 1px; }
+  #mapbox { position: relative; }
+  #mapsvg { width: 100%; height: auto; display: block; background: rgba(10,30,18,.5); border-radius: 10px; }
+  .node { cursor: pointer; }
+  .node text { pointer-events: none; }
+  .node.current circle { stroke: #ffd97a; stroke-width: 3; filter: drop-shadow(0 0 6px rgba(255,217,122,.6)); }
+  .node.reachable circle { stroke: #8fd18f; stroke-dasharray: 4 3; }
+  .node:hover circle { fill: #2f6b45; }
+  .path-label { font-size: 11px; fill: #9cc79c; }
+  .rowbtns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  button.act {
+    background: #2f7a4a; color: #fff; border: none; border-radius: 8px;
+    padding: 9px 16px; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  button.act:hover { background: #3a945a; }
+  button.act:disabled { background: #35513f; color: #7f9b86; cursor: not-allowed; }
+  button.act.warn { background: #8a5a2b; }
+  button.act.ghost { background: transparent; border: 1px solid #3d6b4c; color: #a8d8a0; }
+  .plant-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,.04);
+    margin-bottom: 6px; font-size: 13px;
+  }
+  .plant-row .rare { color: #ffb3d1; }
+  .plant-row .common { color: #9fd6a8; }
+  .tag { font-size: 11px; color: #7fae87; }
+  #log { font-size: 13px; line-height: 1.7; max-height: 190px; overflow-y: auto; }
+  #log .entry { border-bottom: 1px dashed rgba(255,255,255,.08); padding: 4px 0; }
+  .warnline { color: #ffcf6b; font-size: 13px; margin-top: 8px; }
+  .dexgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 500px){ .dexgrid { grid-template-columns: repeat(2,1fr); } }
+  .dex-card {
+    border-radius: 10px; padding: 10px; text-align: center; font-size: 12px;
+    border: 1px solid #2c5238; background: rgba(0,0,0,.25); min-height: 118px;
+  }
+  .dex-card .ic { font-size: 26px; margin: 4px 0; }
+  .dex-card.st0 { opacity: .55; }
+  .dex-card.st0 .ic { filter: brightness(0); }
+  .dex-card.st1 .ic { filter: grayscale(1) brightness(.8); }
+  .dex-card.st2 { border-color: #4f9b64; background: rgba(47,122,74,.18); }
+  .dex-card .nm { color: #ffe9a8; font-weight: bold; }
+  .dex-card .info { color: #9cc79c; margin-top: 3px; line-height: 1.45; }
+  .progresswrap { display:flex; align-items:center; gap:10px; margin-bottom: 10px; font-size: 13px; }
+  .progress { flex:1; height: 8px; background: #1c3a27; border-radius: 6px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg,#4f9b64,#ffd97a); }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.65); display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: #10281a; border: 1px solid #3d6b4c; border-radius: 14px;
+    max-width: 560px; width: 92%; padding: 22px 24px; max-height: 84vh; overflow-y: auto;
+  }
+  .modal h3 { color: #ffd97a; margin-bottom: 12px; font-size: 17px; }
+  .modal ul { line-height: 1.9; font-size: 14px; padding-left: 20px; }
+  .modal .tip { color: #9cc79c; font-size: 13px; margin-top: 10px; }
+  .baglist { margin: 10px 0; }
+  .baglist button { margin: 3px 4px 3px 0; }
+  .close-x { float: right; background: none; border: none; color: #7fae87; font-size: 18px; cursor: pointer; }
+  .starnote { font-size: 15px; color: #ffd97a; margin: 8px 0; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌲 森林考察 · 植物图鉴</h1>
+  <div class="subtitle">走进森林，采集植物，点亮图鉴——但体力、背包和时间，都只够你做一件事。</div>
+
+  <header class="bar">
+    <div class="stat">🗓 第 <b id="stDay">1</b> 天</div>
+    <div class="stat"><span id="stPeriodIcon">🌅</span> <b id="stPeriod">清晨</b></div>
+    <div class="stat">⚡ 体力 <span class="energy-dots" id="stEnergy"></span> <b id="stEnergyNum"></b></div>
+    <div class="stat">📍 <b id="stPos">营地</b></div>
+    <div class="stat bag-chips">🎒 标本夹 <b id="stBag">0/4</b> <span id="stBagItems"></span></div>
+    <div style="margin-left:auto"><button class="act ghost" onclick="openRules()">📖 考察手册</button>
+    <button class="act ghost" onclick="resetGame()">↺ 重置</button></div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="panel" id="mapbox">
+        <h2>🗺 森林地图（数字 = 路程消耗的体力）</h2>
+        <div id="mapsvg"></div>
+      </div>
+      <div class="panel">
+        <h2>🌿 当前区域考察</h2>
+        <div id="regionInfo"></div>
+        <div class="rowbtns">
+          <button class="act" id="btnSearch" onclick="doSearch()">🔍 搜索植物（消耗 1 体力）</button>
+          <button class="act warn" id="btnEnd" onclick="endTrip(false)">⛺ 结束考察 · 返营入库</button>
+        </div>
+        <div class="warnline" id="nightWarn"></div>
+      </div>
+      <div class="panel">
+        <h2>📝 考察日志</h2>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>📕 植物图鉴</h2>
+        <div class="progresswrap">
+          <div class="progress"><div id="dexBar" style="width:0%"></div></div>
+          <span id="dexCount">0/12</span>
+        </div>
+        <div class="dexgrid" id="dexGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 规则 / 手册 -->
+<div class="overlay" id="rulesOverlay">
+  <div class="modal">
+    <button class="close-x" onclick="closeOverlay('rulesOverlay')">✕</button>
+    <h3>📖 考察手册</h3>
+    <ul>
+      <li>⏳ <b>体力即时间</b>：每次考察 12 点体力。时间随体力流逝：<b>清晨 → 正午 → 黄昏 → 夜晚</b>（每 3 点进入下一时段）。</li>
+      <li>🗺 <b>先去哪？</b>移动和搜索都要消耗体力，道路远近不一，一天不可能跑遍森林——每天出发前想好路线。</li>
+      <li>🎒 <b>拿什么？</b>标本夹只有 <b>4 格</b>。装满后再遇到新植物，只能替换或放弃——带回去什么，由你取舍。</li>
+      <li>🌦 <b>什么时候拿？</b>每种植物只在<b>特定区域 + 特定时段</b>出现；稀有植物即使时机对了也可能扑空。想采清晨的植物就得一早赶到，想采夜晚的植物就得摸黑行动。</li>
+      <li>💧 <b>受潮规则</b>：考察结束时若<b>不在营地</b>，标本夹里<b>一半的标本会受潮损毁</b>（向下取整）——记得预留返程体力。反过来说：只带空夹专程夜采，反而毫发无损。</li>
+    </ul>
+    <div class="tip">💡 图鉴中"剪影"表示已发现但尚未采集入册。集齐全部 12 种即通关。</div>
+    <div class="rowbtns" style="margin-top:14px"><button class="act" onclick="closeOverlay('rulesOverlay')">出 发</button></div>
+  </div>
+</div>
+
+<!-- 背包已满：替换选择 -->
+<div class="overlay" id="bagOverlay">
+  <div class="modal">
+    <h3>🎒 标本夹已满！</h3>
+    <div id="bagFoundText" style="margin-bottom:8px"></div>
+    <div class="baglist" id="bagList"></div>
+    <div class="rowbtns"><button class="act warn" onclick="declineFound()">放弃这株</button></div>
+  </div>
+</div>
+
+<!-- 通关 -->
+<div class="overlay" id="winOverlay">
+  <div class="modal" style="text-align:center">
+    <h3>🏆 图鉴点亮完成！</h3>
+    <div id="winText"></div>
+    <div class="starnote" id="winStars"></div>
+    <div class="rowbtns" style="justify-content:center"><button class="act" onclick="closeOverlay('winOverlay')">继续漫游森林</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ============ 数据 ============
+const MAXE = 12, BAGMAX = 4;
+const PERIODS = ["清晨","正午","黄昏","夜晚"];
+const PERIOD_ICONS = ["🌅","☀️","🌇","🌙"];
+const REGIONS = {
+  camp:  { name:"营地",     emoji:"⛺", x:70,  y:225 },
+  valley:{ name:"溪谷",     emoji:"🏞️", x:195, y:150 },
+  slope: { name:"向阳坡",   emoji:"⛰️", x:195, y:55  },
+  forest:{ name:"密林",     emoji:"🌲", x:340, y:150 },
+  swamp: { name:"迷雾沼泽", emoji:"🌫️", x:460, y:235 }
+};
+const PATHS = [
+  ["camp","valley",1], ["camp","slope",2], ["valley","forest",2], ["forest","swamp",1]
+];
+const COST = {};
+PATHS.forEach(([a,b,c]) => { COST[a+"|"+b]=c; COST[b+"|"+a]=c; });
+
+const PLANTS = [
+  { id:"fern",     name:"露珠蕨",   icon:"🌿", region:"valley", period:0,  rarity:"common", desc:"叶尖终日凝着一颗露珠，日照一强便悄悄收起。" },
+  { id:"mossm",    name:"银线苔",   icon:"☘️", region:"valley", period:-1, rarity:"common", desc:"石面上银白色的脉络，全天都能找到。" },
+  { id:"iris",     name:"溪畔鸢尾", icon:"💠", region:"valley", period:1,  rarity:"common", desc:"只在水汽最盛的正午绽开蓝紫色花朵。" },
+  { id:"violet",   name:"晨曦堇",   icon:"🌸", region:"slope",  period:0,  rarity:"common", desc:"只在清晨的薄光里开放，太阳一升高就闭合。" },
+  { id:"orchid",   name:"金穗兰",   icon:"🌾", region:"slope",  period:1,  rarity:"common", desc:"正午的向阳坡上，像撒了一地碎金。" },
+  { id:"snow",     name:"岩缝雪莲", icon:"❄️", region:"slope",  period:2,  rarity:"rare",   desc:"黄昏时岩缝里透出微光的稀有雪莲。" },
+  { id:"shoot",    name:"影木嫩芽", icon:"🌱", region:"forest", period:1,  rarity:"common", desc:"密林深处，正午才被漏下的光斑照亮的嫩芽。" },
+  { id:"bell",     name:"幽影铃兰", icon:"🔔", region:"forest", period:2,  rarity:"rare",   desc:"黄昏里摇曳的黑色铃铛，几乎不发出声音。" },
+  { id:"lamp",     name:"灯芯菇",   icon:"🍄", region:"forest", period:3,  rarity:"rare",   desc:"夜晚发出幽幽荧光的蘑菇，是夜行者的路标。" },
+  { id:"mistf",    name:"雾露花",   icon:"🌫️", region:"swamp",  period:2,  rarity:"rare",   desc:"花瓣上永远裹着一层散不去的沼泽雾气。" },
+  { id:"moonmoss", name:"沼泽月藓", icon:"🌙", region:"swamp",  period:3,  rarity:"common", desc:"只在月光下泛银的苔藓，夜晚格外常见。" },
+  { id:"duck",     name:"浮幽萍",   icon:"💧", region:"swamp",  period:-1, rarity:"common", desc:"漂在水面上的半透明浮萍，全天可见。" }
+];
+
+// ============ 状态 ============
+const SAVE_KEY = "forestDexSave";
+let S = load();
+let logArr = [];
+let pendingFound = null;
+
+function load(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) { const d = JSON.parse(raw); if (d && d.dex) return d; }
+  } catch(e){}
+  return { day:1, energy:MAXE, pos:"camp", bag:[], dex:{}, won:false };
+}
+function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){} }
+
+function timeIdx(){ return Math.min(3, Math.floor((MAXE - S.energy)/3)); }
+function dexOf(id){ return S.dex[id] || 0; }
+function plantById(id){ return PLANTS.find(p => p.id === id); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function log(msg){ logArr.unshift(msg); if (logArr.length>40) logArr.pop(); }
+
+// ============ 行动 ============
+function neighbors(r){
+  const out = [];
+  PATHS.forEach(([a,b,c]) => {
+    if (a===r) out.push([b,c]);
+    else if (b===r) out.push([a,c]);
+  });
+  return out;
+}
+
+function move(r){
+  if (S.energy<=0) return;
+  const cost = COST[S.pos+"|"+r];
+  if (cost===undefined) return;
+  if (cost > S.energy) { log("🚫 体力不足，走不到那里了。也许该考虑收工返营。"); render(); return; }
+  S.energy -= cost;
+  S.pos = r;
+  log("🚶 前往" + REGIONS[r].name + "（消耗 " + cost + " 体力，现在是" + PERIODS[timeIdx()] + "）");
+  afterAction();
+}
+
+function doSearch(){
+  if (S.energy<=0) return;
+  S.energy -= 1;
+  const t = timeIdx();
+  const pool = PLANTS.filter(p => p.region===S.pos && dexOf(p.id)<2 && (p.period===t || p.period===-1));
+  shuffle(pool);
+  let found = null;
+  for (const p of pool) {
+    const ch = p.rarity==="rare" ? 0.4 : 0.75;
+    if (Math.random() < ch) { found = p; break; }
+  }
+  if (!found) {
+    log("🔍 在" + REGIONS[S.pos].name + "搜索了一番，一无所获。（" + PERIODS[t] + "）");
+  } else if (S.bag.length < BAGMAX) {
+    collect(found.id);
+  } else {
+    pendingFound = found;
+    openBagModal(found);
+    render();
+    return;
+  }
+  afterAction();
+}
+
+function collect(id){
+  S.bag.push(id);
+  S.dex[id] = 2;
+  const p = plantById(id);
+  log("🌿 采集到「" + p.name + "」，装入标本夹（" + S.bag.length + "/" + BAGMAX + "）");
+}
+
+function replaceBag(idx){
+  if (!pendingFound) return;
+  const removed = plantById(S.bag[idx]);
+  S.bag.splice(idx,1);
+  collect(pendingFound.id);
+  log("🔁 丢弃了「" + removed.name + "」，换上了「" + pendingFound.name + "」。");
+  pendingFound = null;
+  closeOverlay("bagOverlay");
+  afterAction();
+}
+
+function declineFound(){
+  if (!pendingFound) return;
+  if (dexOf(pendingFound.id) < 1) S.dex[pendingFound.id] = 1;
+  log("🙋 没有位置了，目送「" + pendingFound.name + "」留在原地（图鉴留下剪影）。");
+  pendingFound = null;
+  closeOverlay("bagOverlay");
+  afterAction();
+}
+
+function afterAction(){
+  save();
+  if (S.energy<=0) {
+    log("🌑 体力耗尽，被迫就地收工……");
+    endTrip(true);
+  } else {
+    render();
+  }
+}
+
+function endTrip(forced){
+  const atCamp = S.pos==="camp";
+  const daysUsed = S.day;
+  let lostMsg = "";
+  const kept = [];
+  if (!atCamp && S.bag.length) {
+    const bag = shuffle(S.bag.slice());
+    const nLost = Math.floor(bag.length/2);
+    const lost = bag.slice(0, nLost);
+    bag.slice(nLost).forEach(id => kept.push(id));
+    if (nLost>0) {
+      lostMsg = "⚠️ 不在营地收工，" + nLost + " 份标本受潮损毁（" + lost.map(id=>plantById(id).name).join("、") + "）。";
+    }
+  } else {
+    S.bag.forEach(id => kept.push(id));
+  }
+  S.bag = [];
+  log("─────");
+  if (forced) log("⛺ 第 " + daysUsed + " 天考察结束（体力耗尽）。");
+  else log("⛺ 第 " + daysUsed + " 天考察结束，返回营地。");
+  if (lostMsg) log(lostMsg);
+  if (kept.length) log("📚 入库标本：" + kept.map(id => plantById(id).name).join("、"));
+  S.day += 1;
+  S.energy = MAXE;
+  S.pos = "camp";
+  save();
+  checkWin(daysUsed);
+  render();
+}
+
+function checkWin(daysUsed){
+  const all = PLANTS.every(p => dexOf(p.id)===2);
+  if (all && !S.won) {
+    S.won = true;
+    save();
+    let stars, title;
+    if (daysUsed<=4) { stars="★★★"; title="传奇植物学家"; }
+    else if (daysUsed<=7) { stars="★★☆"; title="资深考察员"; }
+    else { stars="★☆☆"; title="兴致勃勃的业余爱好者"; }
+    document.getElementById("winText").innerHTML =
+      "你用 <b style='color:#ffd97a'>" + daysUsed + "</b> 天走遍了森林，点亮了全部 12 条图鉴。";
+    document.getElementById("winStars").textContent = stars + " " + title;
+    openOverlay("winOverlay");
+  }
+}
+
+function resetGame(){
+  if (!confirm("确定要重置全部进度吗？")) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+// ============ 渲染 ============
+function render(){
+  const t = timeIdx();
+  document.getElementById("stDay").textContent = S.day;
+  document.getElementById("stPeriodIcon").textContent = PERIOD_ICONS[t];
+  document.getElementById("stPeriod").textContent = PERIODS[t];
+  document.getElementById("stEnergy").textContent = "●".repeat(S.energy) + "○".repeat(MAXE-S.energy);
+  document.getElementById("stEnergyNum").textContent = S.energy + "/" + MAXE;
+  document.getElementById("stPos").textContent = REGIONS[S.pos].name;
+  document.getElementById("stBag").textContent = S.bag.length + "/" + BAGMAX;
+  document.getElementById("stBagItems").innerHTML =
+    S.bag.map(id => "<span>" + plantById(id).icon + "</span>").join("") +
+    Array(BAGMAX - S.bag.length).fill("<span style='opacity:.35'>▫</span>").join("");
+  document.getElementById("btnSearch").disabled = S.energy<=0;
+  document.getElementById("btnEnd").disabled = false;
+
+  renderMap();
+  renderRegion();
+  renderDex();
+  renderLog();
+  renderNightWarn(t);
+}
+
+function renderMap(){
+  let svg = "<svg viewBox='0 0 520 300' xmlns='http://www.w3.org/2000/svg'>";
+  PATHS.forEach(([a,b,c]) => {
+    const A = REGIONS[a], B = REGIONS[b];
+    svg += "<line x1='"+A.x+"' y1='"+A.y+"' x2='"+B.x+"' y2='"+B.y+"' stroke='#3d6b4c' stroke-width='2'/>";
+    const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+    svg += "<text class='path-label' x='"+(mx-4)+"' y='"+(my-5)+"'>"+c+"</text>";
+  });
+  const nb = neighbors(S.pos).map(x=>x[0]);
+  Object.keys(REGIONS).forEach(key => {
+    const R = REGIONS[key];
+    const cls = "node" + (key===S.pos ? " current" : (nb.includes(key) ? " reachable" : ""));
+    svg += "<g class='"+cls+"' onclick=\"move('"+key+"')\">"+
+      "<circle cx='"+R.x+"' cy='"+R.y+"' r='26' fill='#1c3a27' stroke='#2c5238' stroke-width='2'/>"+
+      "<text x='"+R.x+"' y='"+(R.y+6)+"' font-size='20' text-anchor='middle'>"+R.emoji+"</text>"+
+      "<text x='"+R.x+"' y='"+(R.y+42)+"' font-size='12' fill='#cfe8cf' text-anchor='middle'>"+R.name+"</text>"+
+      "</g>";
+  });
+  svg += "</svg>";
+  document.getElementById("mapsvg").innerHTML = svg;
+}
+
+function renderRegion(){
+  const R = REGIONS[S.pos];
+  const t = timeIdx();
+  let html = "<div style='font-size:14px;margin-bottom:8px'>当前在 <b style='color:#ffd97a'>" + R.name + "</b>（" + PERIOD_ICONS[t] + PERIODS[t] + "）。可前往：" +
+    neighbors(S.pos).map(([r,c]) => REGIONS[r].name + "(" + c + ")").join("、") + "</div>";
+  const here = PLANTS.filter(p => p.region===S.pos);
+  if (S.pos==="camp") {
+    html += "<div class='tag'>营地里可以整理标本夹。考察结束时不在营地会损失一半标本！</div>";
+  } else {
+    html += here.map(p => {
+      const st = dexOf(p.id);
+      const cond = (p.period===-1 ? "全天" : PERIODS[p.period]) + " · " + (p.rarity==="rare" ? "<span class='rare'>稀有</span>" : "<span class='common'>常见</span>");
+      let status;
+      if (st===2) status = "✅ 已入册";
+      else if (st===1) status = "👁 见过未采";
+      else status = "❓ 未知";
+      return "<div class='plant-row'><span>" + (st>0 ? p.icon+" "+p.name : "❓ ？？？") + "</span><span>" + cond + "　" + status + "</span></div>";
+    }).join("");
+  }
+  document.getElementById("regionInfo").innerHTML = html;
+}
+
+function renderDex(){
+  const n = PLANTS.filter(p => dexOf(p.id)===2).length;
+  document.getElementById("dexCount").textContent = n + "/12";
+  document.getElementById("dexBar").style.width = (n/12*100) + "%";
+  document.getElementById("dexGrid").innerHTML = PLANTS.map(p => {
+    const st = dexOf(p.id);
+    if (st===0) return "<div class='dex-card st0'><div class='ic'>🌿</div><div class='nm'>？？？</div><div class='info'>尚未发现</div></div>";
+    const cond = (p.period===-1 ? "全天" : PERIODS[p.period]) + " · " + REGIONS[p.region].name;
+    if (st===1) return "<div class='dex-card st1'><div class='ic'>"+p.icon+"</div><div class='nm'>"+p.name+"</div><div class='info'>剪影 · "+cond+"<br>已发现，待采集</div></div>";
+    return "<div class='dex-card st2'><div class='ic'>"+p.icon+"</div><div class='nm'>"+p.name+"</div><div class='info'>"+cond+" · "+(p.rarity==="rare"?"稀有":"常见")+"<br>"+p.desc+"</div></div>";
+  }).join("");
+}
+
+function renderLog(){
+  document.getElementById("log").innerHTML = logArr.map(m => "<div class='entry'>"+m+"</div>").join("") || "<div class='tag'>还没有记录。点击地图出发吧！</div>";
+}
+
+function renderNightWarn(t){
+  const el = document.getElementById("nightWarn");
+  if (t>=2 && S.pos!=="camp" && S.bag.length>0) {
+    el.textContent = "⚠️ " + PERIODS[t] + "且不在营地：若体力耗尽，标本夹里一半标本会受潮损毁！";
+  } else if (t===3 && S.pos!=="camp") {
+    el.textContent = "🌙 夜晚的森林适合寻找发光植物，但别忘了——空夹夜采更安全。";
+  } else el.textContent = "";
+}
+
+// ============ 弹窗 ============
+function openOverlay(id){ document.getElementById(id).classList.add("show"); }
+function closeOverlay(id){ document.getElementById(id).classList.remove("show"); }
+function openRules(){ openOverlay("rulesOverlay"); }
+function openBagModal(found){
+  document.getElementById("bagFoundText").innerHTML =
+    "发现了 <b style='color:#ffe9a8'>" + found.icon + " " + found.name + "</b>（" + (found.rarity==="rare"?"稀有":"常见") + "）。替换背包里的哪一份？";
+  document.getElementById("bagList").innerHTML = S.bag.map((id,i) => {
+    const p = plantById(id);
+    return "<button class='act ghost' onclick='replaceBag("+i+")'>" + p.icon + " " + p.name + "</button>";
+  }).join("");
+  openOverlay("bagOverlay");
+}
+
+// ============ 启动 ============
+log("🚌 抵达营地。第 1 天的考察开始了——先看地图，规划今天的路线。");
+if (S.day>1) log("💾 已载入存档：第 " + S.day + " 天，图鉴 " + PLANTS.filter(p=>dexOf(p.id)===2).length + "/12。");
+render();
+openRules();
+</script>
+</body>
+</html>
